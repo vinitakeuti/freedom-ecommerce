@@ -8,7 +8,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 
 # npm ci garante instalação exata do package-lock (inclui compilação do sharp para linux/amd64)
-RUN npm ci
+RUN --mount=type=cache,target=/root/.npm npm ci
 
 # ─── Stage 2: Build ───────────────────────────────────────────────────────────
 FROM node:20-alpine AS builder
@@ -27,7 +27,7 @@ ENV NEXT_PUBLIC_MASTER_DOMAIN=$NEXT_PUBLIC_MASTER_DOMAIN
 ARG NEXT_PUBLIC_SITE_NAME
 ENV NEXT_PUBLIC_SITE_NAME=$NEXT_PUBLIC_SITE_NAME
 
-RUN npm run build
+RUN --mount=type=cache,target=/app/.next/cache npm run build
 
 # ─── Stage 3: Production runner ───────────────────────────────────────────────
 FROM node:20-alpine AS runner
