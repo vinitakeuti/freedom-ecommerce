@@ -124,6 +124,14 @@ export default function CheckoutPage() {
   });
   const [cepLoading, setCepLoading] = useState(false);
 
+  const [formErrors, setFormErrors] = useState<{
+    name?: string;
+    email?: string;
+    cpf?: string;
+    phone?: string;
+  }>({});
+  const [showErrors, setShowErrors] = useState(false);
+
   // Carrega config pública da loja — fonte única de verdade para o checkout.
   useEffect(() => {
     let cancelled = false;
@@ -227,6 +235,9 @@ export default function CheckoutPage() {
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+    if (formErrors[name as keyof typeof formErrors]) {
+      setFormErrors((prev) => ({ ...prev, [name]: undefined }));
+    }
     if (name === "cpf") setForm((p) => ({ ...p, cpf: formatCPF(value) }));
     else if (name === "phone") setForm((p) => ({ ...p, phone: formatPhone(value) }));
     else setForm((p) => ({ ...p, [name]: value }));
@@ -344,7 +355,35 @@ export default function CheckoutPage() {
     digitsOnly(form.phone).length >= 10;
 
   const handleGeneratePix = async () => {
-    if (!isFormValid || items.length === 0) return;
+    const errors: typeof formErrors = {};
+    if (form.name.trim().length < 3) {
+      errors.name = "Nome e sobrenome são obrigatórios (mínimo 3 caracteres).";
+    }
+    if (!/\S+@\S+\.\S+/.test(form.email)) {
+      errors.email = "E-mail inválido. Digite um e-mail válido (ex: seu@email.com).";
+    }
+    if (!validateCPF(form.cpf)) {
+      errors.cpf = "CPF inválido. Digite um CPF correto.";
+    }
+    if (digitsOnly(form.phone).length < 10) {
+      errors.phone = "Telefone inválido (mínimo 10 dígitos com DDD).";
+    }
+
+    setFormErrors(errors);
+    setShowErrors(true);
+
+    if (Object.keys(errors).length > 0) {
+      setErrorMsg("Por favor, preencha corretamente os campos destacados em vermelho.");
+      const firstErrorKey = Object.keys(errors)[0];
+      const el = document.getElementsByName(firstErrorKey)[0];
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.focus();
+      }
+      return;
+    }
+
+    if (items.length === 0) return;
     setLoading(true);
     setErrorMsg("");
 
@@ -490,20 +529,27 @@ export default function CheckoutPage() {
           <div className="co2-form-stack">
             <div className="co2-fg">
               <label className="co2-label">Nome e sobrenome</label>
-              <input name="name" className="co2-input" value={form.name} onChange={handleFormChange} placeholder="Nome e sobrenome" autoComplete="name" />
+              <input name="name" className="co2-input" value={form.name} onChange={handleFormChange} placeholder="Nome e sobrenome" autoComplete="name" style={formErrors.name ? { borderColor: "#ef4444" } : undefined} />
+              {formErrors.name && <span className="co2-field-error">{formErrors.name}</span>}
             </div>
             <div className="co2-fg">
               <label className="co2-label">CPF</label>
-              <input name="cpf" className="co2-input" value={form.cpf} onChange={handleFormChange} placeholder="000.000.000-00" maxLength={14} />
-              {form.cpf.length === 14 && !validateCPF(form.cpf) && <span className="co2-field-error">CPF inválido</span>}
+              <input name="cpf" className="co2-input" value={form.cpf} onChange={handleFormChange} placeholder="000.000.000-00" maxLength={14} style={formErrors.cpf ? { borderColor: "#ef4444" } : undefined} />
+              {formErrors.cpf ? (
+                <span className="co2-field-error">{formErrors.cpf}</span>
+              ) : (
+                form.cpf.length === 14 && !validateCPF(form.cpf) && <span className="co2-field-error">CPF inválido</span>
+              )}
             </div>
             <div className="co2-fg">
               <label className="co2-label">Telefone / WhatsApp</label>
-              <input name="phone" type="tel" className="co2-input" value={form.phone} onChange={handleFormChange} placeholder="(21) 99999-9999" autoComplete="tel" />
+              <input name="phone" type="tel" className="co2-input" value={form.phone} onChange={handleFormChange} placeholder="(21) 99999-9999" autoComplete="tel" style={formErrors.phone ? { borderColor: "#ef4444" } : undefined} />
+              {formErrors.phone && <span className="co2-field-error">{formErrors.phone}</span>}
             </div>
             <div className="co2-fg">
               <label className="co2-label">E-mail</label>
-              <input name="email" type="email" className="co2-input" value={form.email} onChange={handleFormChange} placeholder="seu@email.com" autoComplete="email" />
+              <input name="email" type="email" className="co2-input" value={form.email} onChange={handleFormChange} placeholder="seu@email.com" autoComplete="email" style={formErrors.email ? { borderColor: "#ef4444" } : undefined} />
+              {formErrors.email && <span className="co2-field-error">{formErrors.email}</span>}
             </div>
           </div>
         </div>
@@ -782,7 +828,7 @@ export default function CheckoutPage() {
             <h2 className="co2-section-title">Pagamento</h2>
           </div>
           {errorMsg && <div className="co2-error-banner">{errorMsg}</div>}
-          <button className="co2-pay-btn" onClick={handleGeneratePix} disabled={!isFormValid || loading || items.length === 0}>
+          <button className="co2-pay-btn" onClick={handleGeneratePix} disabled={loading || items.length === 0}>
             {loading
               ? <><span className="co2-loader" /><span>Gerando...</span></>
               : <span>PAGAR AGORA</span>
