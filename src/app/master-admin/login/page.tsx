@@ -132,6 +132,11 @@ export default function MasterLoginPage() {
               required
               autoComplete="current-password"
             />
+            <div style={{ textAlign: "right", marginTop: "-8px", marginBottom: "16px" }}>
+              <Link href="/master-admin/forgot-password" style={{ fontSize: "0.78rem", color: "var(--master-text-muted, #888)", textDecoration: "underline" }}>
+                Esqueceu sua senha?
+              </Link>
+            </div>
             {loginError && <p className="master-error">{loginError}</p>}
             <button type="submit" className="master-btn-primary" disabled={loginLoading}>
               {loginLoading ? "Verificando..." : "Acessar Painel"}

@@ -665,6 +665,7 @@ function DashboardSection({
     dateKey: string;
     paidToday: SalesRevenueSummary;
     pendingToday: { orderCount: number; amountTotal: number };
+    activeVisitors?: number;
   } | null>(null);
 
   useEffect(() => {
@@ -840,6 +841,18 @@ function DashboardSection({
       </div>
 
       <div className="admin-stats-grid" id="admin-section-dashboard-loja">
+        {revData && typeof revData.activeVisitors === "number" && (
+          <div className="admin-stat-card" style={{ borderColor: "rgba(16, 185, 129, 0.3)" }}>
+            <span className="admin-stat-icon-svg" style={{ color: "#10b981" }}>
+              <AdminIcon name="users" />
+            </span>
+            <div className="admin-stat-value">{revData.activeVisitors}</div>
+            <div className="admin-stat-label" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <span className="admin-visitor-pulse" />
+              Visitantes Ativos
+            </div>
+          </div>
+        )}
         <div className="admin-stat-card">
           <span className="admin-stat-icon-svg">
             <AdminIcon name="package" />

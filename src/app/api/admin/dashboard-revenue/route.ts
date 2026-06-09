@@ -6,6 +6,7 @@ import {
   getTodayPendingSnapshot,
   todayKeySaoPaulo,
 } from "@/lib/sales-log";
+import { getActiveVisitorsCount } from "@/lib/visitor-tracker";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,7 @@ export async function GET(req: NextRequest) {
     const tenant = getTenantFromRequest(req);
     const paidToday = getTodayPaidSummary(tenant);
     const pendingToday = getTodayPendingSnapshot(tenant);
+    const activeVisitors = getActiveVisitorsCount(tenant);
 
     return NextResponse.json(
       {
@@ -36,6 +38,7 @@ export async function GET(req: NextRequest) {
         timezone: "America/Sao_Paulo",
         paidToday,
         pendingToday,
+        activeVisitors,
       },
       { headers: { "Cache-Control": "no-store" } }
     );

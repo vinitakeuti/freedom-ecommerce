@@ -11,6 +11,7 @@ import MarqueeBanner from "@/components/MarqueeBanner";
 import Footer from "@/components/Footer";
 import PixelScripts from "@/components/PixelScripts";
 import UTMCapture from "@/components/UTMCapture";
+import ActiveVisitorTracker from "@/components/ActiveVisitorTracker";
 import { readStoreData } from "@/lib/store-data";
 import { getTenant } from "@/lib/tenant";
 
@@ -111,6 +112,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           pixels={(store.pixels ?? []).map(({ accessToken: _omit, ...safe }) => safe)}
         />
         <UTMCapture />
+        <ActiveVisitorTracker />
         <UserProvider>
           <CartProvider>
             <ToastProvider>
