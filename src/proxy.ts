@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const MASTER_DOMAIN_ENV = (process.env.MASTER_DOMAIN ?? "").trim().toLowerCase();
+const MASTER_DOMAIN_ENV = (process.env.MASTER_DOMAIN || process.env.NEXT_PUBLIC_MASTER_DOMAIN || "").trim().toLowerCase();
 const MASTER_DOMAIN = MASTER_DOMAIN_ENV
   .replace(/^https?:\/\//, "")
   .replace(/^www\./, "")
@@ -20,6 +20,9 @@ export function proxy(req: NextRequest) {
   requestHeaders.set("x-tenant-host", host);
 
   const isLocalhost = host === "localhost" || host === "127.0.0.1";
+
+  // Log de depuração para entender o redirecionamento
+  console.log(`[proxy] host="${host}" MASTER_DOMAIN="${MASTER_DOMAIN}" isLocalhost=${isLocalhost} pathname="${pathname}" cookie_tenant="${req.cookies.get("__dev_tenant")?.value || ""}"`);
 
   // ── Dev-mode tenant override ──────────────────────────────────────────────
   // ?__tenant=dominio → persiste cookie __dev_tenant por 24h e retorna cedo
