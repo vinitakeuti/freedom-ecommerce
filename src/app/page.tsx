@@ -36,7 +36,11 @@ export default function StorePage() {
   // window.location.hostname é 100% confiável — sem depender de headers de proxy.
   // Todos os hooks são declarados antes deste useEffect (regra dos hooks).
   useEffect(() => {
-    const masterClean = MASTER_DOMAIN_PUBLIC.replace(/^www\./, "");
+    const masterClean = MASTER_DOMAIN_PUBLIC
+      .replace(/^https?:\/\//, "")
+      .replace(/^www\./, "")
+      .split("/")[0]
+      .split(":")[0];
     const hostClean = window.location.hostname.toLowerCase().replace(/^www\./, "");
     if (masterClean && hostClean === masterClean) {
       window.location.replace("/master-home");
