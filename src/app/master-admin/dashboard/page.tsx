@@ -13,6 +13,7 @@ type TenantSummary = {
 export default function MasterDashboard() {
   const router = useRouter();
   const [tenants, setTenants] = useState<TenantSummary[]>([]);
+  const [dnsStatuses, setDnsStatuses] = useState<Record<string, "checking" | "ok" | "error">>({});
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [newDomain, setNewDomain] = useState("");
@@ -41,6 +42,25 @@ export default function MasterDashboard() {
   useEffect(() => {
     fetchTenants();
   }, [fetchTenants]);
+
+  useEffect(() => {
+    if (tenants.length === 0) return;
+
+    tenants.forEach(async (t) => {
+      setDnsStatuses((prev) => ({ ...prev, [t.domain]: "checking" }));
+      try {
+        const res = await fetch(`/api/master-admin/tenants/check-dns?domain=${encodeURIComponent(t.domain)}`);
+        if (res.ok) {
+          const data = await res.json();
+          setDnsStatuses((prev) => ({ ...prev, [t.domain]: data.status }));
+        } else {
+          setDnsStatuses((prev) => ({ ...prev, [t.domain]: "error" }));
+        }
+      } catch {
+        setDnsStatuses((prev) => ({ ...prev, [t.domain]: "error" }));
+      }
+    });
+  }, [tenants]);
 
   const totalProducts = useMemo(
     () => tenants.reduce((sum, t) => sum + t.productCount, 0),
@@ -282,7 +302,24 @@ export default function MasterDashboard() {
                     </div>
                   </td>
                   <td>
-                    <code className="master-domain">{t.domain}</code>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <code className="master-domain">{t.domain}</code>
+                      <span
+                        className={`dns-status-dot ${dnsStatuses[t.domain] || "checking"}`}
+                        title={
+                          dnsStatuses[t.domain] === "ok"
+                            ? "Domínio apontado e ativo com sucesso!"
+                            : dnsStatuses[t.domain] === "error"
+                            ? "Aguardando apontamento DNS ou IP incorreto na VPS."
+                            : "Verificando conexão..."
+                        }
+                      />
+                      <span className="dns-status-text">
+                        {dnsStatuses[t.domain] === "ok" && "Ativo"}
+                        {dnsStatuses[t.domain] === "error" && "Erro DNS"}
+                        {(dnsStatuses[t.domain] === "checking" || !dnsStatuses[t.domain]) && "Verificando..."}
+                      </span>
+                    </div>
                   </td>
                   <td>
                     {t.productCount} produto{t.productCount !== 1 ? "s" : ""}
