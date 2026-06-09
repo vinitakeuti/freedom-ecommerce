@@ -1,6 +1,8 @@
 # Freedom E-commerce
 
-Plataforma de e-commerce **multi-tenant** construída com Next.js. Uma única instância serve múltiplas lojas simultaneamente, cada uma no seu próprio domínio, com checkout PIX integrado (Paradise Pags, OramaPay, Asaas, Skale Pay, HubPague).
+Plataforma de e-commerce **multi-tenant** construída com Next.js. Uma única instância serve múltiplas lojas simultaneamente, cada uma no seu próprio domínio, com checkout PIX integrado.
+
+Donos de loja criam conta na plataforma, gerenciam suas lojas e produtos de forma independente. Você (master) administra tudo pelo painel master.
 
 ---
 
@@ -18,111 +20,154 @@ Para limpar o override: `/?__tenant=__clear`.
 
 ---
 
-## Deploy via EasyPanel (recomendado)
+## Deploy via EasyPanel
 
-### Método de build
+### 1. Serviços necessários
 
-O projeto usa **build padrão do EasyPanel via GitHub** (nixpacks/Node.js).  
-**Não é necessário** nenhum `Dockerfile`, `nixpacks.toml` ou configuração extra — o EasyPanel detecta o projeto Next.js automaticamente e executa:
+Crie dois serviços no EasyPanel:
 
-```
-npm install → next build → next start
-```
+| Serviço | Tipo | Observação |
+|---|---|---|
+| `freedom-ecom` | App (GitHub) | A aplicação Next.js |
+| `freedom-db` | PostgreSQL | Banco de dados de usuários |
 
-> **Nota sobre nixpacks:** o EasyPanel usa nixpacks como builder interno por padrão, tanto no modo GitHub quanto no modo manual. Os dois modos produzem o mesmo resultado. O build via GitHub funciona normalmente.
+> **Linke o PostgreSQL ao App** em Environment → o EasyPanel injeta a `DATABASE_URL` automaticamente.
 
 ---
 
-### Variáveis de ambiente obrigatórias
+### 2. Método de build
 
-Configure no painel do EasyPanel em **Environment**:
+O projeto usa **build padrão via GitHub** (Dockerfile incluído no repositório).  
+O EasyPanel detecta o `Dockerfile` e executa o build automaticamente.
 
+> O banco de dados é inicializado automaticamente na primeira requisição — **não é necessário rodar migrations manualmente**.
+
+---
+
+### 3. Variáveis de ambiente — configuração obrigatória
+
+Configure no painel do serviço em **Environment**:
+
+#### Banco de dados
 | Variável | Descrição | Exemplo |
 |---|---|---|
-| `ADMIN_PASSWORD` | Senha do painel `/admin` de cada loja | `senha-forte-aqui` |
-| `MASTER_PASSWORD` | Senha do painel `/master-admin` | `outra-senha-forte` |
-| `JWT_SECRET` | Segredo para assinar tokens JWT (min. 32 chars) | `string-aleatoria-longa` |
+| `DATABASE_URL` | Connection string do PostgreSQL | `postgresql://user:pass@host:5432/dbname` |
+| `DATABASE_SSL` | `true` se o PG exigir SSL (conexões externas) | `false` |
+
+> Se você linkou o serviço PostgreSQL ao App no EasyPanel, a `DATABASE_URL` é injetada automaticamente.
+
+#### Acesso master (administrador da plataforma)
+| Variável | Descrição | Exemplo |
+|---|---|---|
+| `MASTER_EMAIL` | Seu e-mail de acesso master | `voce@email.com` |
+| `MASTER_PASSWORD` | Senha do acesso master | `SenhaForte@123` |
+| `MASTER_JWT_SECRET` | Segredo JWT do master (mín. 32 chars) | `string-aleatoria-longa-aqui` |
 | `NEXT_PUBLIC_MASTER_DOMAIN` | Domínio do painel master (sem https://) | `painel.seudominio.com` |
 
-Variáveis opcionais:
+> O login master usa `MASTER_EMAIL` + `MASTER_PASSWORD` — **não é uma conta criada pelo formulário de registro**. Configure esses valores no EasyPanel antes do primeiro acesso.
 
-| Variável | Descrição |
-|---|---|
-| `NEXT_IMAGE_ALLOWED_HOSTS` | Hosts externos de imagens separados por vírgula |
-
----
-
-### ⚠️ Volumes — configuração obrigatória
-
-O projeto persiste dados em dois diretórios. **Sem os volumes montados, todos os dados são perdidos ao reiniciar o container.**
-
-Monte os volumes no EasyPanel em **Storage**:
-
-| Volume (nome sugerido) | Caminho no container | Caminho no host (EasyPanel) |
+#### Acesso admin das lojas (fallback global)
+| Variável | Descrição | Padrão |
 |---|---|---|
-| `store-data` | `/app/data` | automático (volume gerenciado) |
-| `store-uploads` | `/app/public/uploads` | `/etc/easypanel/projects/freedom-ecom/uploads` |
+| `ADMIN_USERNAME` | Usuário admin global das lojas | `admin` |
+| `ADMIN_PASSWORD` | Senha admin global das lojas | `Admin@2024!` |
+| `ADMIN_JWT_SECRET` | Segredo JWT do admin de loja (mín. 32 chars) | *(altere obrigatoriamente)* |
 
-**Passo a passo no EasyPanel:**
-
-1. Acesse o serviço → aba **Storage**
-2. Adicione um volume:
-   - **Nome:** `store-data`
-   - **Mount Path:** `/app/data`
-   - Tipo: *Volume* (gerenciado pelo EasyPanel)
-3. Adicione outro volume:
-   - **Nome:** `store-uploads`
-   - **Mount Path:** `/app/public/uploads`
-   - Tipo: *Host Path*
-   - **Host Path:** `/etc/easypanel/projects/freedom-ecom/uploads`
-4. Salve e faça **Redeploy**
-
-> **Por que `uploads` usa Host Path?** Para que as imagens enviadas pelas lojas sobrevivam entre deploys e possam ser acessadas diretamente pelo Nginx/proxy se necessário.
+> Donos de loja cadastrados na plataforma podem acessar o `/admin` da sua loja usando o e-mail e senha da própria conta — sem precisar do `ADMIN_USERNAME`/`ADMIN_PASSWORD`.
 
 ---
 
-### Estrutura de dados no container
+### 4. Volumes — configuração obrigatória
+
+O projeto persiste dados de loja em dois diretórios. **Sem os volumes, os dados são perdidos a cada redeploy.**
+
+Configure em **Storage** do serviço App:
+
+| Volume (nome sugerido) | Caminho no container | Tipo |
+|---|---|---|
+| `store-data` | `/app/data` | Volume gerenciado pelo EasyPanel |
+| `store-uploads` | `/app/public/uploads` | Host Path: `/etc/easypanel/projects/freedom-ecom/uploads` |
+
+**Passo a passo:**
+1. Serviço → aba **Storage** → **+ Add Volume**
+2. `store-data` → Mount Path: `/app/data` → tipo *Volume*
+3. `store-uploads` → Mount Path: `/app/public/uploads` → tipo *Host Path* → `/etc/easypanel/projects/freedom-ecom/uploads`
+4. Salve → **Redeploy**
+
+> ⚠️ Monte os volumes **antes** do primeiro deploy com dados reais. Dados criados sem volume são perdidos no redeploy.
+
+---
+
+### 5. Configuração completa de exemplo
+
+```env
+# Banco de dados (injetado automaticamente se você linkou o PG no EasyPanel)
+DATABASE_URL=postgresql://freedom:senha@freedom-db:5432/freedom
+
+# Acesso master
+MASTER_EMAIL=voce@email.com
+MASTER_PASSWORD=SuaSenhaMaster@123
+MASTER_JWT_SECRET=gere-uma-string-aleatoria-de-64-chars-aqui
+NEXT_PUBLIC_MASTER_DOMAIN=painel.seudominio.com
+
+# Acesso admin de loja (fallback)
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=SuaSenhaAdmin@123
+ADMIN_JWT_SECRET=outra-string-aleatoria-de-64-chars-aqui
+```
+
+---
+
+## Como funciona o sistema de usuários
 
 ```
-/app/
+Você (master)
+  → login: MASTER_EMAIL + MASTER_PASSWORD
+  → acessa /master-admin → vê TODAS as lojas
+
+Dono de loja (cliente)
+  → cria conta em /master-admin/login → aba "Criar Conta"
+  → acessa /master-admin → vê SOMENTE suas lojas (até 5 gratuitas)
+  → acessa /admin da sua loja com o mesmo e-mail e senha da conta
+```
+
+---
+
+## Estrutura de dados
+
+```
+PostgreSQL
+  ├── users          → contas da plataforma (donos de loja)
+  └── user_tenants   → vínculo owner ↔ domínio de loja
+
+/app/ (volumes montados)
   data/
     tenants/
       loja1.com.br/
         store-data.json    ← config + produtos + banners
         sales-log.json     ← log de vendas (máx. 500 entradas)
-        .registered        ← marca loja como registrada
-      loja2.com.br/
-        store-data.json
   public/
     uploads/
-      loja1.com_br/        ← imagens da loja 1
-      loja2.com_br/        ← imagens da loja 2
+      loja1.com_br/        ← imagens enviadas pela loja
 ```
 
 ---
 
-### Configuração do domínio master
+## Adicionar uma nova loja (como master)
 
-Defina `NEXT_PUBLIC_MASTER_DOMAIN` com o domínio do painel master.  
-Quando alguém acessa esse domínio, é redirecionado automaticamente para `/master-home` (landing page).
+1. Acesse `https://painel.seudominio.com/master-admin`
+2. Clique em **+ Nova Loja** e informe o domínio
+3. No DNS, crie um registro **A** apontando para o IP da VPS
+4. O EasyPanel provisiona SSL automaticamente via Let's Encrypt
+5. Acesse `https://loja.com.br/admin` para configurar a loja
+
+**Não é necessário reiniciar o servidor para cada nova loja.**
 
 ---
 
 ## Deploy manual (VPS com PM2 + Nginx)
 
-Consulte o arquivo [DEPLOY.md](./DEPLOY.md) para instruções completas de deploy manual com PM2, Nginx e SSL via Certbot.
-
----
-
-## Adicionar uma nova loja
-
-1. Acesse `https://painel.seudominio.com/master-admin`
-2. Clique em **+ Nova Loja** e informe o domínio (ex: `loja2.com.br`)
-3. No provedor DNS, crie um registro **A** apontando para o IP da VPS
-4. Configure SSL no painel (EasyPanel faz isso automaticamente via Let's Encrypt)
-5. Acesse `https://loja2.com.br/admin` para configurar a loja
-
-**Não é necessário reiniciar o servidor para cada nova loja.**
+Consulte [DEPLOY.md](./DEPLOY.md) para instruções com PM2, Nginx e SSL via Certbot.
 
 ---
 
@@ -142,9 +187,11 @@ Consulte o arquivo [DEPLOY.md](./DEPLOY.md) para instruções completas de deplo
 
 ## Stack técnica
 
-- **Framework:** Next.js 16 (App Router) + TypeScript
-- **Persistência:** JSON no sistema de arquivos (sem banco de dados)
+- **Framework:** Next.js (App Router) + TypeScript
+- **Banco de dados:** PostgreSQL (usuários da plataforma)
+- **Persistência de loja:** JSON no sistema de arquivos (por tenant)
+- **Autenticação:** JWT via `jose`
+- **Senhas:** `bcryptjs`
 - **Imagens:** `sharp` (AVIF/WebP, redimensionamento automático)
-- **Auth:** JWT via `jose`
 - **PIX QR Code:** `qrcode`
 - **Multi-tenancy:** header `x-tenant-host` injetado pelo proxy reverso
