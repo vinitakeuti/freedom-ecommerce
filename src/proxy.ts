@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const MASTER_DOMAIN = (process.env.MASTER_DOMAIN ?? "").trim().toLowerCase();
+const MASTER_DOMAIN_ENV = (process.env.MASTER_DOMAIN ?? "").trim().toLowerCase();
+const MASTER_DOMAIN = MASTER_DOMAIN_ENV
+  .replace(/^https?:\/\//, "")
+  .replace(/^www\./, "")
+  .split("/")[0]
+  .split(":")[0];
 
 function safeTenant(raw: string): string {
   return raw.split(":")[0].toLowerCase().replace(/[^a-z0-9.-]/g, "_");
@@ -8,20 +13,21 @@ function safeTenant(raw: string): string {
 
 export function proxy(req: NextRequest) {
   const rawHost = req.headers.get("host") ?? req.headers.get("x-forwarded-host") ?? "localhost";
-  const host = rawHost.split(":")[0].trim().toLowerCase();
+  const host = rawHost.split(":")[0].trim().toLowerCase().replace(/^www\./, "");
   const { pathname } = req.nextUrl;
 
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-tenant-host", host);
 
+  const isLocalhost = host === "localhost" || host === "127.0.0.1";
+
   // ── Dev-mode tenant override ──────────────────────────────────────────────
-  // Ativo quando MASTER_DOMAIN não está configurado (dev local).
   // ?__tenant=dominio → persiste cookie __dev_tenant por 24h e retorna cedo
   //   (bypassa o master-domain routing, permitindo acessar /admin de qualquer tenant).
   // ?__tenant=__clear → apaga o cookie e retorna cedo.
   const isDevMode = !MASTER_DOMAIN;
 
-  if (isDevMode) {
+  if (isDevMode || isLocalhost) {
     const paramTenant = req.nextUrl.searchParams.get("__tenant");
 
     if (paramTenant === "__clear") {
@@ -52,7 +58,9 @@ export function proxy(req: NextRequest) {
   }
 
   // ── Master domain routing ─────────────────────────────────────────────────
-  const isMasterDomain = MASTER_DOMAIN !== "" && host === MASTER_DOMAIN;
+  const isMasterDomain =
+    (MASTER_DOMAIN !== "" && host === MASTER_DOMAIN) ||
+    (isLocalhost && !req.cookies.get("__dev_tenant")?.value);
 
   if (isMasterDomain) {
     if (pathname === "/" || pathname === "") {
@@ -69,14 +77,14 @@ export function proxy(req: NextRequest) {
 
   // Block /master-admin from non-master hosts (only if MASTER_DOMAIN is configured)
   if (pathname.startsWith("/master-admin")) {
-    if (MASTER_DOMAIN && host !== MASTER_DOMAIN) {
+    if (MASTER_DOMAIN && host !== MASTER_DOMAIN && !isLocalhost) {
       return NextResponse.redirect(new URL("/", req.url));
     }
   }
 
   // Block /api/master-admin from non-master hosts (only if MASTER_DOMAIN is configured)
   if (pathname.startsWith("/api/master-admin")) {
-    if (MASTER_DOMAIN && host !== MASTER_DOMAIN) {
+    if (MASTER_DOMAIN && host !== MASTER_DOMAIN && !isLocalhost) {
       return NextResponse.json({ message: "Não autorizado" }, { status: 403 });
     }
   }
