@@ -2,7 +2,7 @@
 FROM node:20-alpine AS deps
 
 # sharp (image optimization) requer libs nativas no Alpine
-RUN apk add --no-cache libc6-compat python3 make g++
+RUN apk add --no-cache libc6-compat python3 make g++ openssl
 
 WORKDIR /app
 COPY package.json package-lock.json ./
@@ -30,6 +30,9 @@ RUN npm run build
 # ─── Stage 3: Production runner ───────────────────────────────────────────────
 FROM node:20-alpine AS runner
 
+# Instalar openssl para compatibilidade com Prisma Client
+RUN apk add --no-cache openssl
+
 WORKDIR /app
 
 ENV NODE_ENV=production
@@ -39,13 +42,13 @@ ENV PORT=3000
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Copia o build e dependências
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/next.config.ts ./next.config.ts
-COPY --from=builder /app/prisma ./prisma
+# Copia o build e dependências com a propriedade correta do usuário nextjs
+COPY --chown=nextjs:nodejs --from=builder /app/.next ./.next
+COPY --chown=nextjs:nodejs --from=builder /app/public ./public
+COPY --chown=nextjs:nodejs --from=builder /app/node_modules ./node_modules
+COPY --chown=nextjs:nodejs --from=builder /app/package.json ./package.json
+COPY --chown=nextjs:nodejs --from=builder /app/next.config.ts ./next.config.ts
+COPY --chown=nextjs:nodejs --from=builder /app/prisma ./prisma
 
 # Cria diretórios de dados com permissão correta
 # (serão sobrescritos pelo volume mount, mas garante que o app inicie sem volume)
