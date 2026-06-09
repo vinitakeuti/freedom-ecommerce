@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef, type ReactNode } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, type ReactNode, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
@@ -3535,16 +3535,46 @@ function BannersSection({
 // ─────────────────────────────────────────────────────────────
 // SettingsGroup — card de seção com step indicator
 // ─────────────────────────────────────────────────────────────
-function SettingsGroup({ step, title, children, id }: {
-  step: number; title: string; children: ReactNode; id?: string;
+function SettingsGroup({
+  step,
+  title,
+  children,
+  id,
+  isOpen,
+  onToggle,
+}: {
+  step: number;
+  title: string;
+  children: ReactNode;
+  id?: string;
+  isOpen: boolean;
+  onToggle: () => void;
 }) {
   return (
-    <div className="settings-group" id={id}>
-      <div className="settings-group-header">
+    <div className={`settings-group ${isOpen ? "settings-group--open" : ""}`} id={id}>
+      <div className="settings-group-header" onClick={onToggle} style={{ cursor: "pointer", userSelect: "none" }}>
         <span className="settings-group-step">{step}</span>
-        <span className="settings-group-title">{title}</span>
+        <span className="settings-group-title" style={{ flex: 1 }}>{title}</span>
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={{
+            transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
+            transition: "transform 0.2s ease",
+            opacity: 0.6,
+            marginLeft: 8,
+          }}
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
       </div>
-      <div className="settings-group-body">
+      <div className="settings-group-body" style={{ display: isOpen ? "block" : "none" }}>
         {children}
       </div>
     </div>
@@ -3661,343 +3691,653 @@ function SettingsSection({
   const [borderRadius, setBorderRadius] = useState(data.borderRadius || "14px");
   const [cardRadius,   setCardRadius]   = useState(data.cardRadius   || data.borderRadius || "14px");
 
-  return (
-    <>
-      {/* ── 1. Identidade ── */}
-      <SettingsGroup step={1} title="Identidade da Loja" id="admin-section-settings-identidade">
-        <div className="admin-form-grid">
-          <div className="admin-form-field span-2">
-            <label className="admin-form-label">Nome da Loja</label>
-            <input className="admin-form-input" value={storeName} onChange={(e) => setStoreName(e.target.value)} />
-          </div>
-          <div className="admin-form-field span-2">
-            <label className="admin-form-label">Tagline / Descrição</label>
-            <input className="admin-form-input" value={tagline} onChange={(e) => setTagline(e.target.value)} />
-          </div>
-          <div className="admin-form-field">
-            <label className="admin-form-label">Símbolo ou emoji no logo (texto)</label>
-            <input className="admin-form-input" value={logo} onChange={(e) => setLogo(e.target.value)} />
-          </div>
-          <div className="admin-form-field span-2">
-            <label className="admin-form-label">Logo (Imagem Principal)</label>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
-              <label style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "var(--adm-bg-elevated)", border: "1.5px dashed var(--adm-border)", borderRadius: "8px", padding: "8px 14px", cursor: "pointer", fontSize: "0.85rem", fontWeight: 600, color: "var(--adm-text-muted)", transition: "all 0.18s ease", whiteSpace: "nowrap" }}
-                onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--adm-accent)"; e.currentTarget.style.color = "var(--adm-accent-bright)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--adm-border)"; e.currentTarget.style.color = "var(--adm-text-muted)"; }}>
-                <input type="file" accept="image/*" style={{ display: "none" }} onChange={handleLogoUpload} disabled={uploading} />
-                {uploading ? "Enviando…" : "Upload"}
-              </label>
-              <span style={{ fontSize: "0.8rem", color: "var(--adm-text-faint)" }}>ou</span>
-              <input className="admin-form-input" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder="/uploads/logo.png ou https://..." style={{ marginBottom: 0, flex: 1 }} />
+  // Estados locais para controlar acordeão e preview lateral
+  const [activeStep, setActiveStep] = useState<number | null>(1);
+  const [previewMode, setPreviewMode] = useState<"mobile" | "desktop">("mobile");
+  const [mobileTab, setMobileTab] = useState<"edit" | "preview">("edit");
+
+  // Componente de pré-visualização em tempo real da loja
+  const StorePreview = () => {
+    // Função para converter hexadecimal para RGB para usar com classes e variáveis CSS
+    const getRgbFromHex = (hexColor: string) => {
+      const cleanHex = hexColor.replace("#", "");
+      if (cleanHex.length === 6) {
+        const r = parseInt(cleanHex.substring(0, 2), 16);
+        const g = parseInt(cleanHex.substring(2, 4), 16);
+        const b = parseInt(cleanHex.substring(4, 6), 16);
+        return `${r}, ${g}, ${b}`;
+      }
+      return "139, 92, 246"; // fallback violeta
+    };
+
+    const primaryRgb = getRgbFromHex(primaryColor);
+
+    const previewStyles = {
+      fontFamily: `'${fontFamily}', -apple-system, sans-serif`,
+      fontWeight: fontWeight,
+      '--accent': primaryColor,
+      '--accent-rgb': primaryRgb,
+      '--accent-dim': `rgba(${primaryRgb}, 0.15)`,
+      '--accent-glow': `rgba(${primaryRgb}, 0.4)`,
+      '--accent-bright': primaryColor,
+      '--bg': tertiaryColor,
+      '--bg-card': `color-mix(in srgb, ${tertiaryColor} 95%, ${titleColor})`,
+      '--bg-elevated': `color-mix(in srgb, ${tertiaryColor} 90%, ${titleColor})`,
+      '--header-bg': headerColor,
+      '--text': titleColor,
+      '--text-muted': textColor,
+      '--price-color': priceColor,
+      '--btn-text': btnTextColor,
+      '--border': `color-mix(in srgb, ${titleColor} 12%, transparent)`,
+      '--border-hover': `rgba(${primaryRgb}, 0.5)`,
+      '--radius': borderRadius,
+      '--radius-lg': `calc(${borderRadius} * 1.5)`,
+      '--radius-xl': `calc(${borderRadius} * 2)`,
+      '--radius-sm': `calc(${borderRadius} * 0.6)`,
+      '--card-radius': cardRadius,
+      '--success': secondaryColor,
+      '--gradient': `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
+      '--product-title-align': productTitleAlign,
+    } as React.CSSProperties;
+
+    const marqueeTexts = [marqueeText1, marqueeText2, marqueeText3].filter(Boolean);
+    const marqueeBar = marqueeTexts.length > 0 && (
+      <div className="preview-marquee" style={{ background: "var(--accent)", color: "var(--btn-text)" }}>
+        <div className="preview-marquee-track">
+          <span>{marqueeTexts[0]}</span>
+          {marqueeTexts.length > 1 && <span className="preview-marquee-separator">•</span>}
+          {marqueeTexts.length > 1 && <span>{marqueeTexts[1]}</span>}
+          {marqueeTexts.length > 2 && <span className="preview-marquee-separator">•</span>}
+          {marqueeTexts.length > 2 && <span>{marqueeTexts[2]}</span>}
+        </div>
+      </div>
+    );
+
+    const marqueeAbove = marqueePosition === "above-nav";
+
+    const mockProducts = [
+      {
+        id: "mock-1",
+        name: "Smartwatch Ultra 9 Pro",
+        description: "Notificações, NFC, oxímetro de pulso e tela AMOLED brilhante.",
+        price: 299.90,
+        oldPrice: 399.90,
+        category: "Eletrônicos",
+        badge: "Oferta",
+      },
+      {
+        id: "mock-2",
+        name: "Tênis Speed Runner v2",
+        description: "Tecnologia de amortecimento inteligente para corridas leves.",
+        price: 189.90,
+        category: "Esportes",
+        badge: "Popular",
+      }
+    ];
+
+    const heroLines = (heroTitle || "Descubra os Melhores\nProdutos").split("\n");
+
+    return (
+      <div className="store-preview-container" style={previewStyles}>
+        {/* Marquee Banner (Above) */}
+        {marqueeAbove && marqueeBar}
+
+        {/* Header/Navbar */}
+        <header className={`preview-header ${stickyHeader ? "preview-header--sticky" : ""}`}>
+          <div className={`preview-header-inner preview-header-inner--logo-${logoPosition}`}>
+            <div className="preview-header-logo">
+              {logoDisplay !== "text-only" && (logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={logoUrl} alt="Logo" style={{ height: `${logoSize * 0.45}px`, maxWidth: "80px", objectFit: "contain" }} />
+              ) : (
+                <span style={{ fontSize: `${logoSize * 0.45}px`, lineHeight: 1 }}>{logo || "🛍️"}</span>
+              ))}
+              {logoDisplay !== "image-only" && (
+                <span className="preview-header-logo-text">{storeName || "Minha Loja"}</span>
+              )}
             </div>
-            {uploadError && <p style={{ fontSize: "0.8rem", color: "#fca5a5", marginBottom: "6px" }}>{uploadError}</p>}
-            {logoUrl && (
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 4 }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={logoUrl} alt="preview" style={{ height: 48, maxWidth: 160, objectFit: "contain", borderRadius: 6, background: "rgba(255,255,255,0.08)", padding: 6, border: "1px solid var(--adm-border)" }} />
-                <button type="button" onClick={() => setLogoUrl("")} style={{ background: "none", border: "none", color: "#fca5a5", cursor: "pointer", fontSize: "0.78rem" }}>✕ Remover</button>
+
+            <div className="preview-header-actions">
+              <span className="preview-icon">🔍</span>
+              <span className="preview-icon" style={{ position: "relative" }}>
+                🛒
+                <span className="preview-cart-badge" style={{ background: "var(--accent)", color: "var(--btn-text)" }}>2</span>
+              </span>
+            </div>
+          </div>
+        </header>
+
+        {/* Marquee Banner (Below) */}
+        {!marqueeAbove && marqueeBar}
+
+        {/* Hero Section */}
+        {showHero && (
+          <section className={`preview-hero preview-hero--align-${heroAlign}`} style={{ order: heroPosition === "before-banner" ? -1 : 1 }}>
+            <div className="preview-hero-content">
+              {heroTag && <span className="preview-hero-tag" style={{ background: "var(--accent-dim)", color: "var(--accent)" }}>{heroTag}</span>}
+              <h1 className="preview-hero-title">
+                {heroLines.map((line, i) => (
+                  <Fragment key={i}>
+                    {i > 0 && <br />}
+                    {line}
+                  </Fragment>
+                ))}
+              </h1>
+              <p className="preview-hero-subtitle">{heroSubtitle || "Os melhores produtos."}</p>
+            </div>
+          </section>
+        )}
+
+        {/* Mock Top Banner */}
+        <div className="preview-banner-placeholder">
+          <div className="preview-banner-img">
+            <span>Banner de Destaque</span>
+          </div>
+        </div>
+
+        {/* Product Catalog Mockup */}
+        <div className="preview-products-section">
+          <div className="preview-section-header">
+            <h2 className="preview-section-title">Todos os Produtos</h2>
+            <span className="preview-product-count">2 produtos</span>
+          </div>
+
+          <div className={`preview-product-grid cards-${cardStyle}`}>
+            {mockProducts.map((p) => {
+              const hasDiscount = !!p.oldPrice;
+              
+              return (
+                <div key={p.id} className="preview-product-card" style={{ borderRadius: "var(--card-radius)" }}>
+                  <div className="preview-product-card-img-wrap">
+                    {p.badge && <span className="preview-product-badge" style={{ background: "var(--gradient)", color: "var(--btn-text)" }}>{p.badge}</span>}
+                    <div className="preview-product-card-img">
+                      <span>🖼️</span>
+                    </div>
+                  </div>
+                  <div className="preview-product-card-body" style={{ textAlign: productTitleAlign }}>
+                    <span className="preview-product-category">{p.category}</span>
+                    <h3 className="preview-product-name">{p.name}</h3>
+                    <p className="preview-product-desc">{p.description}</p>
+                    
+                    <div className="preview-product-footer">
+                      <div className="preview-product-price-block">
+                        {hasDiscount && <s className="preview-product-old-price">R$ {p.oldPrice?.toFixed(2).replace(".", ",")}</s>}
+                        <span className="preview-product-price" style={{ color: "var(--price-color)" }}>R$ {p.price.toFixed(2).replace(".", ",")}</span>
+                      </div>
+                      
+                      <button type="button" className="preview-buy-btn" style={{ background: "var(--accent)", color: "var(--btn-text)", borderRadius: "var(--radius)" }}>
+                        Comprar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <footer className="preview-footer">
+          <p className="preview-footer-logo">{storeName || "Minha Loja"}</p>
+          <p className="preview-footer-tagline">{tagline || "Sua loja preferida."}</p>
+          <p className="preview-footer-copy">© 2026. Todos os direitos reservados.</p>
+        </footer>
+      </div>
+    );
+  };
+
+  return (
+    <div className="admin-settings-container">
+      {/* Mobile tabs switches */}
+      <div className="admin-settings-mobile-tabs">
+        <button
+          type="button"
+          className={`admin-settings-tab-btn ${mobileTab === "edit" ? "active" : ""}`}
+          onClick={() => setMobileTab("edit")}
+        >
+          Editar Aparência
+        </button>
+        <button
+          type="button"
+          className={`admin-settings-tab-btn ${mobileTab === "preview" ? "active" : ""}`}
+          onClick={() => setMobileTab("preview")}
+        >
+          Ver Prévia
+        </button>
+      </div>
+
+      <div className={`admin-settings-layout ${mobileTab === "preview" ? "show-preview-only" : "show-edit-only"}`}>
+        {/* Editor Settings Column (Left) */}
+        <div className="admin-settings-editor">
+          {/* ── 1. Identidade ── */}
+          <SettingsGroup
+            step={1}
+            title="Identidade da Loja"
+            id="admin-section-settings-identidade"
+            isOpen={activeStep === 1}
+            onToggle={() => setActiveStep(activeStep === 1 ? null : 1)}
+          >
+            <div className="admin-form-grid">
+              <div className="admin-form-field span-2">
+                <label className="admin-form-label">Nome da Loja</label>
+                <input className="admin-form-input" value={storeName} onChange={(e) => setStoreName(e.target.value)} />
+              </div>
+              <div className="admin-form-field span-2">
+                <label className="admin-form-label">Tagline / Descrição</label>
+                <input className="admin-form-input" value={tagline} onChange={(e) => setTagline(e.target.value)} />
+              </div>
+              <div className="admin-form-field">
+                <label className="admin-form-label">Símbolo ou emoji no logo (texto)</label>
+                <input className="admin-form-input" value={logo} onChange={(e) => setLogo(e.target.value)} />
+              </div>
+              <div className="admin-form-field span-2">
+                <label className="admin-form-label">Logo (Imagem Principal)</label>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+                  <label style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "var(--adm-bg-elevated)", border: "1.5px dashed var(--adm-border)", borderRadius: "8px", padding: "8px 14px", cursor: "pointer", fontSize: "0.85rem", fontWeight: 600, color: "var(--adm-text-muted)", transition: "all 0.18s ease", whiteSpace: "nowrap" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--adm-accent)"; e.currentTarget.style.color = "var(--adm-accent-bright)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--adm-border)"; e.currentTarget.style.color = "var(--adm-text-muted)"; }}>
+                    <input type="file" accept="image/*" style={{ display: "none" }} onChange={handleLogoUpload} disabled={uploading} />
+                    {uploading ? "Enviando…" : "Upload"}
+                  </label>
+                  <span style={{ fontSize: "0.8rem", color: "var(--adm-text-faint)" }}>ou</span>
+                  <input className="admin-form-input" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder="/uploads/logo.png ou https://..." style={{ marginBottom: 0, flex: 1 }} />
+                </div>
+                {uploadError && <p style={{ fontSize: "0.8rem", color: "#fca5a5", marginBottom: "6px" }}>{uploadError}</p>}
+                {logoUrl && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 4 }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={logoUrl} alt="preview" style={{ height: 48, maxWidth: 160, objectFit: "contain", borderRadius: 6, background: "rgba(255,255,255,0.08)", padding: 6, border: "1px solid var(--adm-border)" }} />
+                    <button type="button" onClick={() => setLogoUrl("")} style={{ background: "none", border: "none", color: "#fca5a5", cursor: "pointer", fontSize: "0.78rem" }}>✕ Remover</button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </SettingsGroup>
+
+          {/* ── 2. Navbar ── */}
+          <SettingsGroup
+            step={2}
+            title="Navbar"
+            id="admin-section-settings-navbar"
+            isOpen={activeStep === 2}
+            onToggle={() => setActiveStep(activeStep === 2 ? null : 2)}
+          >
+            <div className="admin-form-grid">
+              <div className="admin-form-field span-2">
+                <label className="admin-form-label">Exibição da Logo</label>
+                <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                  {([
+                    { value: "image-text", label: "Imagem + Texto" },
+                    { value: "image-only", label: "Só Imagem" },
+                    { value: "text-only",  label: "Só Texto" },
+                  ] as const).map((opt) => (
+                    <button key={opt.value} type="button" onClick={() => setLogoDisplay(opt.value)} style={{ flex: 1, padding: "8px 6px", borderRadius: 8, fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", border: logoDisplay === opt.value ? "2px solid var(--adm-accent)" : "1.5px solid var(--adm-border)", background: logoDisplay === opt.value ? "var(--adm-accent-dim)" : "var(--adm-bg-elevated)", color: logoDisplay === opt.value ? "var(--adm-accent-bright)" : "var(--adm-text-muted)", transition: "all 0.18s ease" }}>
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="admin-form-field span-2">
+                <label className="admin-form-label">Posição da Logo</label>
+                <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                  {(["left","center","right"] as const).map((pos) => (
+                    <button key={pos} type="button" onClick={() => setLogoPosition(pos)} style={{ flex: 1, padding: "8px 4px", borderRadius: 8, fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", border: logoPosition === pos ? "2px solid var(--adm-accent)" : "1.5px solid var(--adm-border)", background: logoPosition === pos ? "var(--adm-accent-dim)" : "var(--adm-bg-elevated)", color: logoPosition === pos ? "var(--adm-accent-bright)" : "var(--adm-text-muted)", transition: "all 0.18s ease" }}>
+                      {pos === "left" ? "⬅ Esquerda" : pos === "center" ? "↔ Centro" : "➡ Direita"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="admin-form-field span-2">
+                <label className="admin-form-label">Tamanho da Logo — {logoSize}px</label>
+                <input type="range" min={20} max={110} step={2} value={logoSize} onChange={(e) => setLogoSize(Number(e.target.value))} style={{ width: "100%", accentColor: "var(--adm-accent)", marginTop: 6 }} />
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.74rem", color: "var(--adm-text-faint)", marginTop: 4 }}><span>20px</span><span>{logoSize}px</span><span>110px</span></div>
+              </div>
+              <ColorField label="Cor de Fundo da Navbar" value={headerColor} onChange={setHeaderColor} />
+              <div className="admin-form-field" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <label className="admin-toggle">
+                  <input type="checkbox" checked={stickyHeader} onChange={(e) => setStickyHeader(e.target.checked)} />
+                  <span className="admin-toggle-slider" />
+                </label>
+                <span style={{ fontSize: "0.88rem", color: "var(--adm-text-muted)" }}>Fixar navbar no topo ao rolar</span>
+              </div>
+            </div>
+          </SettingsGroup>
+
+          {/* ── 3. Faixa de Destaque ── */}
+          <SettingsGroup
+            step={3}
+            title="Faixa de Destaque"
+            id="admin-section-settings-faixa"
+            isOpen={activeStep === 3}
+            onToggle={() => setActiveStep(activeStep === 3 ? null : 3)}
+          >
+            <div className="admin-form-grid">
+              <div className="admin-form-field">
+                <label className="admin-form-label">Texto 1 (obrigatório)</label>
+                <input className="admin-form-input" value={marqueeText1} onChange={(e) => setMarqueeText1(e.target.value)} placeholder="ex: Frete grátis acima de R$ 199" />
+              </div>
+              <div className="admin-form-field">
+                <label className="admin-form-label">Texto 2 (opcional)</label>
+                <input className="admin-form-input" value={marqueeText2} onChange={(e) => setMarqueeText2(e.target.value)} placeholder="ex: Compra segura" />
+              </div>
+              <div className="admin-form-field span-2">
+                <label className="admin-form-label">Texto 3 (opcional)</label>
+                <input className="admin-form-input" value={marqueeText3} onChange={(e) => setMarqueeText3(e.target.value)} placeholder="ex: Até 12x sem juros" />
+              </div>
+              <div className="admin-form-field span-2">
+                <label className="admin-form-label">Posição da Faixa</label>
+                <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                  {([
+                    { value: "below-nav", label: "⬇ Abaixo da Navbar" },
+                    { value: "above-nav", label: "⬆ Acima da Navbar" },
+                  ] as const).map((opt) => (
+                    <button key={opt.value} type="button" onClick={() => setMarqueePosition(opt.value)} style={{ flex: 1, padding: "9px 6px", borderRadius: 8, fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", border: marqueePosition === opt.value ? "2px solid var(--adm-accent)" : "1.5px solid var(--adm-border)", background: marqueePosition === opt.value ? "var(--adm-accent-dim)" : "var(--adm-bg-elevated)", color: marqueePosition === opt.value ? "var(--adm-accent-bright)" : "var(--adm-text-muted)", transition: "all 0.18s ease" }}>
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </SettingsGroup>
+
+          {/* ── 4. Hero ── */}
+          <SettingsGroup
+            step={4}
+            title="Seção de Boas-vindas (Hero)"
+            id="admin-section-settings-hero"
+            isOpen={activeStep === 4}
+            onToggle={() => setActiveStep(activeStep === 4 ? null : 4)}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
+              <label className="admin-toggle">
+                <input type="checkbox" checked={showHero} onChange={(e) => setShowHero(e.target.checked)} />
+                <span className="admin-toggle-slider" />
+              </label>
+              <div>
+                <div style={{ fontSize: "0.9rem", color: "var(--adm-text)", fontWeight: 500 }}>Exibir seção Hero na página inicial</div>
+                <div style={{ fontSize: "0.78rem", color: "var(--adm-text-faint)", marginTop: 2 }}>Textos editáveis abaixo. Pode ficar vazia a etiqueta superior.</div>
+              </div>
+            </div>
+
+            {showHero && (
+              <>
+                <div className="admin-form-field span-2" style={{ marginBottom: 16 }}>
+                  <label className="admin-form-label">Posição em relação ao banner de topo</label>
+                  <div style={{ display: "flex", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
+                    {([
+                      { value: "after-banner" as const, label: "Depois do banner", sub: "Padrão — hero abaixo das imagens" },
+                      { value: "before-banner" as const, label: "Antes do banner", sub: "Hero aparece primeiro" },
+                    ]).map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setHeroPosition(opt.value)}
+                        style={{
+                          flex: "1 1 200px", padding: "10px 12px", borderRadius: 8, textAlign: "left",
+                          cursor: "pointer", border: heroPosition === opt.value ? "2px solid var(--adm-accent)" : "1.5px solid var(--adm-border)",
+                          background: heroPosition === opt.value ? "var(--adm-accent-dim)" : "var(--adm-bg-elevated)",
+                          color: "var(--adm-text-muted)", transition: "all 0.18s ease",
+                        }}
+                      >
+                        <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--adm-text)" }}>{opt.label}</div>
+                        <div style={{ fontSize: "0.72rem", marginTop: 4, opacity: 0.85 }}>{opt.sub}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="admin-form-field span-2" style={{ marginBottom: 16 }}>
+                  <label className="admin-form-label">Alinhamento do texto do Hero</label>
+                  <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                    {([
+                      { value: "center" as const, label: "Centralizado" },
+                      { value: "left" as const, label: "À esquerda" },
+                    ]).map((opt) => (
+                      <button key={opt.value} type="button" onClick={() => setHeroAlign(opt.value)} style={{ flex: 1, padding: "9px 8px", borderRadius: 8, fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", border: heroAlign === opt.value ? "2px solid var(--adm-accent)" : "1.5px solid var(--adm-border)", background: heroAlign === opt.value ? "var(--adm-accent-dim)" : "var(--adm-bg-elevated)", color: heroAlign === opt.value ? "var(--adm-accent-bright)" : "var(--adm-text-muted)", transition: "all 0.18s ease" }}>
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="admin-form-field span-2">
+                  <label className="admin-form-label">Etiqueta (badge) — opcional</label>
+                  <input className="admin-form-input" value={heroTag} onChange={(e) => setHeroTag(e.target.value)} placeholder="ex: Nova coleção disponível" />
+                  <p style={{ fontSize: "0.74rem", color: "var(--adm-text-faint)", marginTop: 6 }}>Deixe em branco para ocultar a etiqueta.</p>
+                </div>
+                <div className="admin-form-field span-2">
+                  <label className="admin-form-label">Título principal</label>
+                  <textarea
+                    className="admin-form-textarea"
+                    rows={3}
+                    value={heroTitle}
+                    onChange={(e) => setHeroTitle(e.target.value)}
+                    placeholder="Uma linha ou várias — use Enter para quebrar"
+                    style={{ minHeight: 72 }}
+                  />
+                </div>
+                <div className="admin-form-field span-2">
+                  <label className="admin-form-label">Subtítulo</label>
+                  <textarea
+                    className="admin-form-textarea"
+                    rows={3}
+                    value={heroSubtitle}
+                    onChange={(e) => setHeroSubtitle(e.target.value)}
+                    placeholder="Texto de apoio abaixo do título"
+                  />
+                </div>
+              </>
+            )}
+          </SettingsGroup>
+
+          {/* ── 5. Cores ── */}
+          <SettingsGroup
+            step={5}
+            title="Cores e Aparência"
+            id="admin-section-settings-cores"
+            isOpen={activeStep === 5}
+            onToggle={() => setActiveStep(activeStep === 5 ? null : 5)}
+          >
+            <div className="admin-form-grid">
+              <ColorField label="Cor Principal (Botões e Hover)" value={primaryColor}   onChange={setPrimaryColor} />
+              <ColorField label="Cor Secundária (Degradês)"      value={secondaryColor} onChange={setSecondaryColor} />
+              <ColorField label="Cor de Fundo da Loja"           value={tertiaryColor}  onChange={setTertiaryColor} />
+              <div className="admin-form-field">
+                <label className="admin-form-label">Arredondamento Geral — Botões, Modais, Inputs</label>
+                <select className="admin-form-select" value={borderRadius} onChange={(e) => setBorderRadius(e.target.value)}>
+                  <option value="0px">Retos (0px)</option>
+                  <option value="8px">Pouco Arredondados (8px)</option>
+                  <option value="14px">Arredondados — Padrão (14px)</option>
+                  <option value="24px">Bem Arredondados (24px)</option>
+                  <option value="999px">Pílula / Totalmente Arredondados</option>
+                </select>
+              </div>
+            </div>
+          </SettingsGroup>
+
+          {/* ── 6. Tipografia ── */}
+          <SettingsGroup
+            step={6}
+            title="Tipografia"
+            id="admin-section-settings-tipografia"
+            isOpen={activeStep === 6}
+            onToggle={() => setActiveStep(activeStep === 6 ? null : 6)}
+          >
+            <div className="admin-form-grid">
+              <div className="admin-form-field span-2">
+                <label className="admin-form-label">Fonte Principal</label>
+                <select className="admin-form-select" value={fontFamily} onChange={(e) => setFontFamily(e.target.value)}>
+                  {["Inter","Roboto","Poppins","Montserrat","Raleway","Nunito","Lato","Oswald","Playfair Display","DM Sans"].map(f => (
+                    <option key={f} value={f}>{f}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="admin-form-field span-2">
+                <label className="admin-form-label">Peso / Boldness</label>
+                <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
+                  {([
+                    { value: 300, label: "Light" },
+                    { value: 400, label: "Regular" },
+                    { value: 500, label: "Medium" },
+                    { value: 600, label: "Semibold" },
+                    { value: 700, label: "Bold" },
+                  ] as const).map((opt) => (
+                    <button key={opt.value} type="button" onClick={() => setFontWeight(opt.value)} style={{ flex: 1, minWidth: 60, padding: "8px 4px", borderRadius: 8, fontSize: "0.78rem", fontWeight: opt.value, cursor: "pointer", border: fontWeight === opt.value ? "2px solid var(--adm-accent)" : "1.5px solid var(--adm-border)", background: fontWeight === opt.value ? "var(--adm-accent-dim)" : "var(--adm-bg-elevated)", color: fontWeight === opt.value ? "var(--adm-accent-bright)" : "var(--adm-text-muted)", transition: "all 0.18s ease" }}>
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="admin-form-field span-2">
+                <label className="admin-form-label">Títulos dos produtos (listagem)</label>
+                <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                  {([
+                    { value: "left" as const, label: "⬅ À esquerda" },
+                    { value: "center" as const, label: "↔ Centralizado" },
+                  ]).map((opt) => (
+                    <button key={opt.value} type="button" onClick={() => setProductTitleAlign(opt.value)} style={{ flex: 1, padding: "9px 8px", borderRadius: 8, fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", border: productTitleAlign === opt.value ? "2px solid var(--adm-accent)" : "1.5px solid var(--adm-border)", background: productTitleAlign === opt.value ? "var(--adm-accent-dim)" : "var(--adm-bg-elevated)", color: productTitleAlign === opt.value ? "var(--adm-accent-bright)" : "var(--adm-text-muted)", transition: "all 0.18s ease" }}>
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                <p style={{ fontSize: "0.74rem", color: "var(--adm-text-faint)", marginTop: 8 }}>Nome e descrição curta nos cards da página inicial.</p>
+              </div>
+              <ColorField label="Cor dos Títulos"   value={titleColor}   onChange={setTitleColor} />
+              <ColorField label="Cor das Descrições" value={textColor}    onChange={setTextColor} />
+              <ColorField label="Cor dos Preços"     value={priceColor}   onChange={setPriceColor} />
+              <ColorField label="Texto dos Botões"   value={btnTextColor} onChange={setBtnTextColor} />
+            </div>
+          </SettingsGroup>
+
+          {/* ── 7. Cards ── */}
+          <SettingsGroup
+            step={7}
+            title="Design dos Cards de Produto"
+            id="admin-section-settings-cards"
+            isOpen={activeStep === 7}
+            onToggle={() => setActiveStep(activeStep === 7 ? null : 7)}
+          >
+            {/* Card style */}
+            <div style={{ marginBottom: 20 }}>
+              <label className="admin-form-label" style={{ marginBottom: 10, display: "block" }}>Estilo do Card</label>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+                {([
+                  { value: "default",   label: "Padrão",     sub: "Borda + sombra suave",       icon: "A" },
+                  { value: "minimal",   label: "Minimal",    sub: "Sem borda, sombra leve",     icon: "B" },
+                  { value: "clean",     label: "Clean",      sub: "Sem moldura, só conteúdo",   icon: "C" },
+                  { value: "bold",      label: "Bold",       sub: "Tipografia forte, barra accent", icon: "D" },
+                  { value: "neon",      label: "Neon",       sub: "Borda brilhante no hover",   icon: "E" },
+                  { value: "cinematic", label: "Cinemático", sub: "Texto sobre imagem",         icon: "F" },
+                ] as const).map((opt) => (
+                  <button key={opt.value} type="button" onClick={() => setCardStyle(opt.value)} style={{ padding: "12px 8px", borderRadius: 10, cursor: "pointer", textAlign: "center", border: cardStyle === opt.value ? "2px solid var(--adm-accent)" : "1.5px solid var(--adm-border)", background: cardStyle === opt.value ? "var(--adm-accent-dim)" : "var(--adm-bg-elevated)", color: cardStyle === opt.value ? "var(--adm-accent-bright)" : "var(--adm-text-muted)", transition: "all 0.18s ease" }}>
+                    <div style={{ fontSize: "0.75rem", fontWeight: 800, letterSpacing: "0.05em", color: "var(--adm-text-faint)", marginBottom: 4 }}>{opt.icon}</div>
+                    <div style={{ fontSize: "0.82rem", fontWeight: 700 }}>{opt.label}</div>
+                    <div style={{ fontSize: "0.69rem", opacity: 0.65, marginTop: 3 }}>{opt.sub}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Card border radius */}
+            <div>
+              <label className="admin-form-label" style={{ marginBottom: 10, display: "block" }}>Arredondamento dos Cards</label>
+              <div style={{ display: "flex", gap: 8 }}>
+                {([
+                  { value: "0px",   label: "Reto",      preview: "0" },
+                  { value: "8px",   label: "Suave",     preview: "8" },
+                  { value: "14px",  label: "Médio",     preview: "14" },
+                  { value: "20px",  label: "Arredond.", preview: "20" },
+                  { value: "28px",  label: "Grande",    preview: "28" },
+                ] as const).map((opt) => (
+                  <button key={opt.value} type="button" onClick={() => setCardRadius(opt.value)}
+                    style={{ flex: 1, padding: "10px 4px", cursor: "pointer", textAlign: "center",
+                      border: cardRadius === opt.value ? "2px solid var(--adm-accent)" : "1.5px solid var(--adm-border)",
+                      background: cardRadius === opt.value ? "var(--adm-accent-dim)" : "var(--adm-bg-elevated)",
+                      color: cardRadius === opt.value ? "var(--adm-accent-bright)" : "var(--adm-text-muted)",
+                      borderRadius: 8, transition: "all 0.18s ease",
+                    }}>
+                    <div style={{ width: 28, height: 22, margin: "0 auto 6px", background: "currentColor", opacity: 0.5, borderRadius: opt.value }} />
+                    <div style={{ fontSize: "0.75rem", fontWeight: 700 }}>{opt.label}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </SettingsGroup>
+
+          {/* ── Salvar ── */}
+          <div className="admin-settings-save-panel">
+            <button
+              className="admin-btn admin-btn-primary"
+              style={{ width: "100%" }}
+              disabled={saving}
+              id="save-settings-btn"
+              onClick={() => onSave({
+                storeName, storeTagline: tagline, storeLogo: logo,
+                logoUrl, logoDisplay, logoSize, logoPosition,
+                fontFamily, fontWeight, cardStyle,
+                marqueeTexts: [marqueeText1, marqueeText2, marqueeText3].filter(Boolean),
+                marqueePosition,
+                primaryColor, secondaryColor, tertiaryColor, borderRadius, cardRadius,
+                headerColor, stickyHeader, titleColor, textColor, priceColor, btnTextColor,
+                showHero, heroPosition, heroAlign, heroTag, heroTitle, heroSubtitle, productTitleAlign,
+              })}
+            >
+              {saving ? "Salvando…" : "Salvar todas as configurações"}
+            </button>
+          </div>
+        </div>
+
+        {/* Live Preview Pane (Right) */}
+        <div className="admin-settings-preview-pane">
+          <div className="admin-preview-controls">
+            <span className="admin-preview-title">Pré-visualização da Loja</span>
+            <div className="admin-preview-mode-switch">
+              <button
+                type="button"
+                className={`admin-preview-switch-btn ${previewMode === "mobile" ? "active" : ""}`}
+                onClick={() => setPreviewMode("mobile")}
+              >
+                Celular
+              </button>
+              <button
+                type="button"
+                className={`admin-preview-switch-btn ${previewMode === "desktop" ? "active" : ""}`}
+                onClick={() => setPreviewMode("desktop")}
+              >
+                Computador
+              </button>
+            </div>
+          </div>
+
+          <div className={`admin-preview-viewport-wrapper mode-${previewMode}`}>
+            {previewMode === "mobile" ? (
+              <div className="phone-device-frame">
+                <div className="phone-device-notch" />
+                <div className="phone-device-screen">
+                  <StorePreview />
+                </div>
+              </div>
+            ) : (
+              <div className="browser-device-frame">
+                <div className="browser-device-header">
+                  <div className="browser-dots">
+                    <span className="dot dot-red" />
+                    <span className="dot dot-yellow" />
+                    <span className="dot dot-green" />
+                  </div>
+                  <div className="browser-address-bar">
+                    <span>{storeName ? storeName.toLowerCase().replace(/\s+/g, "") : "sualoja"}.com.br</span>
+                  </div>
+                </div>
+                <div className="browser-device-content">
+                  <StorePreview />
+                </div>
               </div>
             )}
           </div>
         </div>
-      </SettingsGroup>
-
-      {/* ── 2. Navbar ── */}
-      <SettingsGroup step={2} title="Navbar" id="admin-section-settings-navbar">
-        <div className="admin-form-grid">
-          <div className="admin-form-field span-2">
-            <label className="admin-form-label">Exibição da Logo</label>
-            <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
-              {([
-                { value: "image-text", label: "Imagem + Texto" },
-                { value: "image-only", label: "Só Imagem" },
-                { value: "text-only",  label: "Só Texto" },
-              ] as const).map((opt) => (
-                <button key={opt.value} type="button" onClick={() => setLogoDisplay(opt.value)} style={{ flex: 1, padding: "8px 6px", borderRadius: 8, fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", border: logoDisplay === opt.value ? "2px solid var(--adm-accent)" : "1.5px solid var(--adm-border)", background: logoDisplay === opt.value ? "var(--adm-accent-dim)" : "var(--adm-bg-elevated)", color: logoDisplay === opt.value ? "var(--adm-accent-bright)" : "var(--adm-text-muted)", transition: "all 0.18s ease" }}>
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="admin-form-field span-2">
-            <label className="admin-form-label">Posição da Logo</label>
-            <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
-              {(["left","center","right"] as const).map((pos) => (
-                <button key={pos} type="button" onClick={() => setLogoPosition(pos)} style={{ flex: 1, padding: "8px 4px", borderRadius: 8, fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", border: logoPosition === pos ? "2px solid var(--adm-accent)" : "1.5px solid var(--adm-border)", background: logoPosition === pos ? "var(--adm-accent-dim)" : "var(--adm-bg-elevated)", color: logoPosition === pos ? "var(--adm-accent-bright)" : "var(--adm-text-muted)", transition: "all 0.18s ease" }}>
-                  {pos === "left" ? "⬅ Esquerda" : pos === "center" ? "↔ Centro" : "➡ Direita"}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="admin-form-field span-2">
-            <label className="admin-form-label">Tamanho da Logo — {logoSize}px</label>
-            <input type="range" min={20} max={110} step={2} value={logoSize} onChange={(e) => setLogoSize(Number(e.target.value))} style={{ width: "100%", accentColor: "var(--adm-accent)", marginTop: 6 }} />
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.74rem", color: "var(--adm-text-faint)", marginTop: 4 }}><span>20px</span><span>{logoSize}px</span><span>110px</span></div>
-          </div>
-          <ColorField label="Cor de Fundo da Navbar" value={headerColor} onChange={setHeaderColor} />
-          <div className="admin-form-field" style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <label className="admin-toggle">
-              <input type="checkbox" checked={stickyHeader} onChange={(e) => setStickyHeader(e.target.checked)} />
-              <span className="admin-toggle-slider" />
-            </label>
-            <span style={{ fontSize: "0.88rem", color: "var(--adm-text-muted)" }}>Fixar navbar no topo ao rolar</span>
-          </div>
-        </div>
-      </SettingsGroup>
-
-      {/* ── 3. Faixa de Destaque ── */}
-      <SettingsGroup step={3} title="Faixa de Destaque" id="admin-section-settings-faixa">
-        <div className="admin-form-grid">
-          <div className="admin-form-field">
-            <label className="admin-form-label">Texto 1 (obrigatório)</label>
-            <input className="admin-form-input" value={marqueeText1} onChange={(e) => setMarqueeText1(e.target.value)} placeholder="ex: Frete grátis acima de R$ 199" />
-          </div>
-          <div className="admin-form-field">
-            <label className="admin-form-label">Texto 2 (opcional)</label>
-            <input className="admin-form-input" value={marqueeText2} onChange={(e) => setMarqueeText2(e.target.value)} placeholder="ex: Compra segura" />
-          </div>
-          <div className="admin-form-field span-2">
-            <label className="admin-form-label">Texto 3 (opcional)</label>
-            <input className="admin-form-input" value={marqueeText3} onChange={(e) => setMarqueeText3(e.target.value)} placeholder="ex: Até 12x sem juros" />
-          </div>
-          <div className="admin-form-field span-2">
-            <label className="admin-form-label">Posição da Faixa</label>
-            <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
-              {([
-                { value: "below-nav", label: "⬇ Abaixo da Navbar" },
-                { value: "above-nav", label: "⬆ Acima da Navbar" },
-              ] as const).map((opt) => (
-                <button key={opt.value} type="button" onClick={() => setMarqueePosition(opt.value)} style={{ flex: 1, padding: "9px 6px", borderRadius: 8, fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", border: marqueePosition === opt.value ? "2px solid var(--adm-accent)" : "1.5px solid var(--adm-border)", background: marqueePosition === opt.value ? "var(--adm-accent-dim)" : "var(--adm-bg-elevated)", color: marqueePosition === opt.value ? "var(--adm-accent-bright)" : "var(--adm-text-muted)", transition: "all 0.18s ease" }}>
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </SettingsGroup>
-
-      {/* ── 4. Hero ── */}
-      <SettingsGroup step={4} title="Seção de Boas-vindas (Hero)" id="admin-section-settings-hero">
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
-          <label className="admin-toggle">
-            <input type="checkbox" checked={showHero} onChange={(e) => setShowHero(e.target.checked)} />
-            <span className="admin-toggle-slider" />
-          </label>
-          <div>
-            <div style={{ fontSize: "0.9rem", color: "var(--adm-text)", fontWeight: 500 }}>Exibir seção Hero na página inicial</div>
-            <div style={{ fontSize: "0.78rem", color: "var(--adm-text-faint)", marginTop: 2 }}>Textos editáveis abaixo. Pode ficar vazia a etiqueta superior.</div>
-          </div>
-        </div>
-
-        {showHero && (
-          <>
-            <div className="admin-form-field span-2" style={{ marginBottom: 16 }}>
-              <label className="admin-form-label">Posição em relação ao banner de topo</label>
-              <div style={{ display: "flex", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
-                {([
-                  { value: "after-banner" as const, label: "Depois do banner", sub: "Padrão — hero abaixo das imagens" },
-                  { value: "before-banner" as const, label: "Antes do banner", sub: "Hero aparece primeiro" },
-                ]).map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => setHeroPosition(opt.value)}
-                    style={{
-                      flex: "1 1 200px", padding: "10px 12px", borderRadius: 8, textAlign: "left",
-                      cursor: "pointer", border: heroPosition === opt.value ? "2px solid var(--adm-accent)" : "1.5px solid var(--adm-border)",
-                      background: heroPosition === opt.value ? "var(--adm-accent-dim)" : "var(--adm-bg-elevated)",
-                      color: "var(--adm-text-muted)", transition: "all 0.18s ease",
-                    }}
-                  >
-                    <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--adm-text)" }}>{opt.label}</div>
-                    <div style={{ fontSize: "0.72rem", marginTop: 4, opacity: 0.85 }}>{opt.sub}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="admin-form-field span-2" style={{ marginBottom: 16 }}>
-              <label className="admin-form-label">Alinhamento do texto do Hero</label>
-              <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
-                {([
-                  { value: "center" as const, label: "Centralizado" },
-                  { value: "left" as const, label: "À esquerda" },
-                ]).map((opt) => (
-                  <button key={opt.value} type="button" onClick={() => setHeroAlign(opt.value)} style={{ flex: 1, padding: "9px 8px", borderRadius: 8, fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", border: heroAlign === opt.value ? "2px solid var(--adm-accent)" : "1.5px solid var(--adm-border)", background: heroAlign === opt.value ? "var(--adm-accent-dim)" : "var(--adm-bg-elevated)", color: heroAlign === opt.value ? "var(--adm-accent-bright)" : "var(--adm-text-muted)", transition: "all 0.18s ease" }}>
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="admin-form-field span-2">
-              <label className="admin-form-label">Etiqueta (badge) — opcional</label>
-              <input className="admin-form-input" value={heroTag} onChange={(e) => setHeroTag(e.target.value)} placeholder="ex: Nova coleção disponível" />
-              <p style={{ fontSize: "0.74rem", color: "var(--adm-text-faint)", marginTop: 6 }}>Deixe em branco para ocultar a etiqueta.</p>
-            </div>
-            <div className="admin-form-field span-2">
-              <label className="admin-form-label">Título principal</label>
-              <textarea
-                className="admin-form-textarea"
-                rows={3}
-                value={heroTitle}
-                onChange={(e) => setHeroTitle(e.target.value)}
-                placeholder="Uma linha ou várias — use Enter para quebrar"
-                style={{ minHeight: 72 }}
-              />
-            </div>
-            <div className="admin-form-field span-2">
-              <label className="admin-form-label">Subtítulo</label>
-              <textarea
-                className="admin-form-textarea"
-                rows={3}
-                value={heroSubtitle}
-                onChange={(e) => setHeroSubtitle(e.target.value)}
-                placeholder="Texto de apoio abaixo do título"
-              />
-            </div>
-          </>
-        )}
-      </SettingsGroup>
-
-      {/* ── 5. Cores ── */}
-      <SettingsGroup step={5} title="Cores e Aparência" id="admin-section-settings-cores">
-        <div className="admin-form-grid">
-          <ColorField label="Cor Principal (Botões e Hover)" value={primaryColor}   onChange={setPrimaryColor} />
-          <ColorField label="Cor Secundária (Degradês)"      value={secondaryColor} onChange={setSecondaryColor} />
-          <ColorField label="Cor de Fundo da Loja"           value={tertiaryColor}  onChange={setTertiaryColor} />
-          <div className="admin-form-field">
-            <label className="admin-form-label">Arredondamento Geral — Botões, Modais, Inputs</label>
-            <select className="admin-form-select" value={borderRadius} onChange={(e) => setBorderRadius(e.target.value)}>
-              <option value="0px">Retos (0px)</option>
-              <option value="8px">Pouco Arredondados (8px)</option>
-              <option value="14px">Arredondados — Padrão (14px)</option>
-              <option value="24px">Bem Arredondados (24px)</option>
-              <option value="999px">Pílula / Totalmente Arredondados</option>
-            </select>
-          </div>
-        </div>
-      </SettingsGroup>
-
-      {/* ── 6. Tipografia ── */}
-      <SettingsGroup step={6} title="Tipografia" id="admin-section-settings-tipografia">
-        <div className="admin-form-grid">
-          <div className="admin-form-field span-2">
-            <label className="admin-form-label">Fonte Principal</label>
-            <select className="admin-form-select" value={fontFamily} onChange={(e) => setFontFamily(e.target.value)}>
-              {["Inter","Roboto","Poppins","Montserrat","Raleway","Nunito","Lato","Oswald","Playfair Display","DM Sans"].map(f => (
-                <option key={f} value={f}>{f}</option>
-              ))}
-            </select>
-          </div>
-          <div className="admin-form-field span-2">
-            <label className="admin-form-label">Peso / Boldness</label>
-            <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
-              {([
-                { value: 300, label: "Light" },
-                { value: 400, label: "Regular" },
-                { value: 500, label: "Medium" },
-                { value: 600, label: "Semibold" },
-                { value: 700, label: "Bold" },
-              ] as const).map((opt) => (
-                <button key={opt.value} type="button" onClick={() => setFontWeight(opt.value)} style={{ flex: 1, minWidth: 60, padding: "8px 4px", borderRadius: 8, fontSize: "0.78rem", fontWeight: opt.value, cursor: "pointer", border: fontWeight === opt.value ? "2px solid var(--adm-accent)" : "1.5px solid var(--adm-border)", background: fontWeight === opt.value ? "var(--adm-accent-dim)" : "var(--adm-bg-elevated)", color: fontWeight === opt.value ? "var(--adm-accent-bright)" : "var(--adm-text-muted)", transition: "all 0.18s ease" }}>
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="admin-form-field span-2">
-            <label className="admin-form-label">Títulos dos produtos (listagem)</label>
-            <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
-              {([
-                { value: "left" as const, label: "⬅ À esquerda" },
-                { value: "center" as const, label: "↔ Centralizado" },
-              ]).map((opt) => (
-                <button key={opt.value} type="button" onClick={() => setProductTitleAlign(opt.value)} style={{ flex: 1, padding: "9px 8px", borderRadius: 8, fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", border: productTitleAlign === opt.value ? "2px solid var(--adm-accent)" : "1.5px solid var(--adm-border)", background: productTitleAlign === opt.value ? "var(--adm-accent-dim)" : "var(--adm-bg-elevated)", color: productTitleAlign === opt.value ? "var(--adm-accent-bright)" : "var(--adm-text-muted)", transition: "all 0.18s ease" }}>
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-            <p style={{ fontSize: "0.74rem", color: "var(--adm-text-faint)", marginTop: 8 }}>Nome e descrição curta nos cards da página inicial.</p>
-          </div>
-          <ColorField label="Cor dos Títulos"   value={titleColor}   onChange={setTitleColor} />
-          <ColorField label="Cor das Descrições" value={textColor}    onChange={setTextColor} />
-          <ColorField label="Cor dos Preços"     value={priceColor}   onChange={setPriceColor} />
-          <ColorField label="Texto dos Botões"   value={btnTextColor} onChange={setBtnTextColor} />
-        </div>
-      </SettingsGroup>
-
-      {/* ── 7. Cards ── */}
-      <SettingsGroup step={7} title="Design dos Cards de Produto" id="admin-section-settings-cards">
-        {/* Card style */}
-        <div style={{ marginBottom: 20 }}>
-          <label className="admin-form-label" style={{ marginBottom: 10, display: "block" }}>Estilo do Card</label>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-            {([
-              { value: "default",   label: "Padrão",     sub: "Borda + sombra suave",       icon: "A" },
-              { value: "minimal",   label: "Minimal",    sub: "Sem borda, sombra leve",     icon: "B" },
-              { value: "clean",     label: "Clean",      sub: "Sem moldura, só conteúdo",   icon: "C" },
-              { value: "bold",      label: "Bold",       sub: "Tipografia forte, barra accent", icon: "D" },
-              { value: "neon",      label: "Neon",       sub: "Borda brilhante no hover",   icon: "E" },
-              { value: "cinematic", label: "Cinemático", sub: "Texto sobre imagem",         icon: "F" },
-            ] as const).map((opt) => (
-              <button key={opt.value} type="button" onClick={() => setCardStyle(opt.value)} style={{ padding: "12px 8px", borderRadius: 10, cursor: "pointer", textAlign: "center", border: cardStyle === opt.value ? "2px solid var(--adm-accent)" : "1.5px solid var(--adm-border)", background: cardStyle === opt.value ? "var(--adm-accent-dim)" : "var(--adm-bg-elevated)", color: cardStyle === opt.value ? "var(--adm-accent-bright)" : "var(--adm-text-muted)", transition: "all 0.18s ease" }}>
-                <div style={{ fontSize: "0.75rem", fontWeight: 800, letterSpacing: "0.05em", color: "var(--adm-text-faint)", marginBottom: 4 }}>{opt.icon}</div>
-                <div style={{ fontSize: "0.82rem", fontWeight: 700 }}>{opt.label}</div>
-                <div style={{ fontSize: "0.69rem", opacity: 0.65, marginTop: 3 }}>{opt.sub}</div>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Card border radius */}
-        <div>
-          <label className="admin-form-label" style={{ marginBottom: 10, display: "block" }}>Arredondamento dos Cards</label>
-          <div style={{ display: "flex", gap: 8 }}>
-            {([
-              { value: "0px",   label: "Reto",      preview: "0" },
-              { value: "8px",   label: "Suave",     preview: "8" },
-              { value: "14px",  label: "Médio",     preview: "14" },
-              { value: "20px",  label: "Arredond.", preview: "20" },
-              { value: "28px",  label: "Grande",    preview: "28" },
-            ] as const).map((opt) => (
-              <button key={opt.value} type="button" onClick={() => setCardRadius(opt.value)}
-                style={{ flex: 1, padding: "10px 4px", cursor: "pointer", textAlign: "center",
-                  border: cardRadius === opt.value ? "2px solid var(--adm-accent)" : "1.5px solid var(--adm-border)",
-                  background: cardRadius === opt.value ? "var(--adm-accent-dim)" : "var(--adm-bg-elevated)",
-                  color: cardRadius === opt.value ? "var(--adm-accent-bright)" : "var(--adm-text-muted)",
-                  borderRadius: 8, transition: "all 0.18s ease",
-                }}>
-                <div style={{ width: 28, height: 22, margin: "0 auto 6px", background: "currentColor", opacity: 0.5, borderRadius: opt.value }} />
-                <div style={{ fontSize: "0.75rem", fontWeight: 700 }}>{opt.label}</div>
-              </button>
-            ))}
-          </div>
-        </div>
-      </SettingsGroup>
-
-      {/* ── Salvar ── */}
-      <div style={{ position: "sticky", bottom: 0, background: "var(--adm-bg)", borderTop: "1px solid var(--adm-border)", padding: "16px 0", marginTop: 8 }}>
-        <button
-          className="admin-btn admin-btn-primary"
-          style={{ width: "100%" }}
-          disabled={saving}
-          id="save-settings-btn"
-          onClick={() => onSave({
-            storeName, storeTagline: tagline, storeLogo: logo,
-            logoUrl, logoDisplay, logoSize, logoPosition,
-            fontFamily, fontWeight, cardStyle,
-            marqueeTexts: [marqueeText1, marqueeText2, marqueeText3].filter(Boolean),
-            marqueePosition,
-            primaryColor, secondaryColor, tertiaryColor, borderRadius, cardRadius,
-            headerColor, stickyHeader, titleColor, textColor, priceColor, btnTextColor,
-            showHero, heroPosition, heroAlign, heroTag, heroTitle, heroSubtitle, productTitleAlign,
-          })}
-        >
-          {saving ? "Salvando…" : "Salvar todas as configurações"}
-        </button>
       </div>
-    </>
+    </div>
   );
 }
 
