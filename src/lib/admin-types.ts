@@ -135,6 +135,8 @@ export interface StoreData {
   storeName: string;
   storeTagline: string;
   storeLogo: string;
+  /** ID do usuário da plataforma que criou/possui esta loja */
+  ownerId?: string;
   logoUrl?: string;
   logoDisplay?: "image-text" | "image-only" | "text-only";
   logoSize?: number;

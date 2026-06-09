@@ -11,16 +11,23 @@ export default function AdminLoginPage() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  // Detecta se o campo parece um e-mail para enviar como `email` em vez de `username`
+  const isEmail = /\S+@\S+\.\S+/.test(username.trim());
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
     try {
+      const body = isEmail
+        ? { email: username.trim(), password }
+        : { username, password };
+
       const res = await fetch("/api/admin/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify(body),
       });
 
       if (!res.ok) {
@@ -53,13 +60,13 @@ export default function AdminLoginPage() {
         <form onSubmit={handleSubmit}>
           <div className="admin-form-field">
             <label className="admin-form-label" htmlFor="username">
-              Usuário
+              Usuário ou E-mail
             </label>
             <input
               id="username"
               type="text"
               className="admin-form-input"
-              placeholder="admin"
+              placeholder="admin ou seu@email.com"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required

@@ -249,13 +249,14 @@ export function listTenants(): string[] {
 }
 
 /** Create a new tenant with default store data and an optional initial store name */
-export function createTenant(domain: string, storeName?: string): StoreData {
+export function createTenant(domain: string, storeName?: string, ownerId?: string): StoreData {
   const data: StoreData = {
     ...DEFAULT_STORE(),
     storeName: storeName ?? domain,
     storeTagline: "Loja online",
     products: [],
     banners: [],
+    ...(ownerId ? { ownerId } : {}),
   };
   writeStoreData(data, domain);
   fs.writeFileSync(path.join(TENANTS_ROOT, domain, ".registered"), "");

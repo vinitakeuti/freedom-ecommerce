@@ -1,26 +1,49 @@
 import { NextRequest, NextResponse } from "next/server";
-import { jwtVerify } from "jose";
+import { jwtVerify, type JWTPayload } from "jose";
 import { listTenants, createTenant, readStoreData } from "@/lib/store-data";
+import { canUserCreateStore, linkTenantToUser, findUserById } from "@/lib/users";
 
 const MASTER_SECRET = new TextEncoder().encode(
   process.env.MASTER_JWT_SECRET || "master-secret-change-this-in-production"
 );
 
-async function verifyMaster(req: NextRequest) {
-  const token = req.cookies.get("master_token")?.value;
-  if (!token) throw new Error("Unauthorized");
-  await jwtVerify(token, MASTER_SECRET);
+const MAX_FREE_STORES = 5;
+
+interface AuthPayload extends JWTPayload {
+  role: "master" | "owner";
+  userId?: string;
+  tenants?: string[];
 }
 
-/** GET /api/master-admin/tenants — list all tenants with summary */
+async function verifyToken(req: NextRequest): Promise<AuthPayload> {
+  const token = req.cookies.get("master_token")?.value;
+  if (!token) throw new Error("Unauthorized");
+  const { payload } = await jwtVerify(token, MASTER_SECRET);
+  return payload as AuthPayload;
+}
+
+/** GET /api/master-admin/tenants — list tenants visible to the caller */
 export async function GET(req: NextRequest) {
+  let payload: AuthPayload;
   try {
-    await verifyMaster(req);
+    payload = await verifyToken(req);
   } catch {
     return NextResponse.json({ message: "Não autorizado" }, { status: 401 });
   }
 
-  const tenants = listTenants().map((domain) => {
+  // Master vê todas; owner vê apenas as suas
+  let domains: string[];
+  if (payload.role === "master") {
+    domains = listTenants();
+  } else if (payload.role === "owner" && payload.userId) {
+    // Re-lê do arquivo para ter a lista atualizada (o JWT pode estar desatualizado)
+    const user = findUserById(payload.userId);
+    domains = user?.tenants ?? [];
+  } else {
+    return NextResponse.json({ message: "Não autorizado" }, { status: 401 });
+  }
+
+  const tenants = domains.map((domain) => {
     try {
       const store = readStoreData(domain);
       return {
@@ -39,10 +62,27 @@ export async function GET(req: NextRequest) {
 
 /** POST /api/master-admin/tenants — create new tenant */
 export async function POST(req: NextRequest) {
+  let payload: AuthPayload;
   try {
-    await verifyMaster(req);
+    payload = await verifyToken(req);
   } catch {
     return NextResponse.json({ message: "Não autorizado" }, { status: 401 });
+  }
+
+  if (payload.role !== "master" && payload.role !== "owner") {
+    return NextResponse.json({ message: "Não autorizado" }, { status: 401 });
+  }
+
+  // Owners: verificar limite de lojas gratuitas
+  if (payload.role === "owner") {
+    if (!payload.userId || !canUserCreateStore(payload.userId)) {
+      return NextResponse.json(
+        {
+          message: `Limite de ${MAX_FREE_STORES} lojas gratuitas atingido. Entre em contato para mais lojas.`,
+        },
+        { status: 403 }
+      );
+    }
   }
 
   try {
@@ -52,7 +92,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: "Domínio inválido" }, { status: 400 });
     }
 
-    // Normalize domain — lowercase, trim, no protocol
     const normalized = domain
       .replace(/^https?:\/\//, "")
       .replace(/\/$/, "")
@@ -64,8 +103,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: "Esse domínio já existe" }, { status: 409 });
     }
 
-    const store = createTenant(normalized, storeName);
-    return NextResponse.json({ domain: normalized, storeName: store.storeName }, { status: 201 });
+    const store = createTenant(normalized, storeName, payload.userId);
+
+    // Vincula o tenant ao usuário owner
+    if (payload.role === "owner" && payload.userId) {
+      linkTenantToUser(payload.userId, normalized);
+    }
+
+    return NextResponse.json(
+      { domain: normalized, storeName: store.storeName },
+      { status: 201 }
+    );
   } catch {
     return NextResponse.json({ message: "Erro ao criar loja" }, { status: 500 });
   }
