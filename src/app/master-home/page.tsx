@@ -253,7 +253,7 @@ export default function MasterHomePage() {
           </nav>
           <div className="lp-header-actions">
             <Link href="/master-admin" className="lp-btn lp-btn-nav">
-              Acessar Painel Master
+              Login / Criar Conta
             </Link>
           </div>
         </div>
