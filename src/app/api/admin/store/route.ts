@@ -35,6 +35,14 @@ export async function PATCH(req: NextRequest) {
     const body = await req.json();
     const current = readStoreData(tenant);
     const updated = mergeStorePatch(current, body);
+    
+    // Segurança: Preservar o ownerId original do lojista
+    if (current.ownerId) {
+      updated.ownerId = current.ownerId;
+    } else {
+      delete updated.ownerId;
+    }
+    
     writeStoreData(updated, tenant);
     return NextResponse.json({ message: "Salvo com sucesso" });
   } catch (err) {

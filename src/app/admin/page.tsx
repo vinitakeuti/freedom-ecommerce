@@ -263,6 +263,7 @@ export default function AdminPage() {
     }
   };
 
+
   const logout = async () => {
     await fetch("/api/admin/auth", { method: "DELETE" });
     router.push("/admin/login");
@@ -712,6 +713,52 @@ function DashboardSection({
   const webhooksPending = (cc?.salePendingWebhooks ?? []).filter(Boolean).length;
   const webhooksApproved = (cc?.saleApprovedWebhooks ?? []).filter(Boolean).length;
 
+  const handleExportStore = () => {
+    if (!storeData) return;
+    const jsonStr = JSON.stringify(storeData, null, 2);
+    const blob = new Blob([jsonStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    const cleanStoreName = storeData.storeName.toLowerCase().replace(/[^a-z0-9]/g, "-");
+    link.download = `${cleanStoreName}-backup.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    alert("Backup exportado com sucesso!");
+  };
+
+  const handleImportStore = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!confirm("Tem certeza que deseja importar este backup?\n\nATENÇÃO: Isso irá substituir todos os produtos, banners, cores e configurações da loja atual!")) {
+      e.target.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const json = JSON.parse(event.target?.result as string);
+        if (!json.storeName || !Array.isArray(json.products)) {
+          alert("Arquivo de backup inválido. Certifique-se de carregar um arquivo JSON de backup do EcomFreedom.");
+          return;
+        }
+
+        setSaving(true);
+        await onSaveConfig(json);
+        alert("Backup importado com sucesso! Recarregando página...");
+        window.location.reload();
+      } catch {
+        alert("Erro ao importar o backup.");
+        setSaving(false);
+      }
+    };
+    reader.readAsText(file);
+  };
+
   const handleSave = async () => {
     setSaving(true);
     await onSaveConfig({ pixDiscountEnabled: pixEnabled, pixDiscount: pixPct, freeShippingMin: freeShip });
@@ -1026,6 +1073,44 @@ function DashboardSection({
           >
             {saving ? "Salvando…" : "Salvar Configurações"}
           </button>
+        </div>
+      </div>
+
+      {/* ── Backup e Clonagem de Loja ── */}
+      <div className="admin-card" id="admin-section-dashboard-backup" style={{ borderLeft: "4px solid var(--adm-accent)" }}>
+        <h2 className="admin-card-title">Backup e Clonagem de Loja</h2>
+        <p style={{ fontSize: "0.82rem", color: "var(--adm-text-muted)", marginBottom: 20, lineHeight: 1.5 }}>
+          Exporte toda a configuração da sua loja (incluindo catálogo de produtos, banners, cores de layout, regras de frete e chaves do checkout) para um arquivo de backup. Você pode importar este arquivo em qualquer outra loja da plataforma para cloná-la instantaneamente.
+        </p>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+          <button
+            type="button"
+            className="admin-btn-primary"
+            onClick={handleExportStore}
+            style={{ display: "inline-flex", alignItems: "center", gap: 8 }}
+          >
+            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24" aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+            </svg>
+            Exportar Loja (Backup JSON)
+          </button>
+          
+          <label
+            className="admin-btn-ghost"
+            style={{ display: "inline-flex", alignItems: "center", gap: 8, cursor: "pointer", margin: 0, padding: "10px 18px", borderRadius: "10px", fontWeight: 600, fontSize: "0.875rem" }}
+          >
+            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24" aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+            </svg>
+            Importar Backup
+            <input
+              type="file"
+              accept=".json"
+              onChange={handleImportStore}
+              style={{ display: "none" }}
+              disabled={saving}
+            />
+          </label>
         </div>
       </div>
 
