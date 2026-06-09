@@ -1,9 +1,10 @@
-import fs from "fs";
-import path from "path";
 import bcrypt from "bcryptjs";
+import { query, queryOne } from "./db";
+import { initDatabase } from "./db-init";
 
-const USERS_FILE = path.join(process.cwd(), "data", "users.json");
 const MAX_FREE_STORES = 5;
+
+// ─── Tipos ────────────────────────────────────────────────────────────────────
 
 export interface UserRecord {
   id: string;
@@ -17,140 +18,165 @@ export interface UserRecord {
   createdAt: string;
 }
 
-interface UsersFile {
-  v: number;
-  users: UserRecord[];
+interface UserRow {
+  id: string;
+  name: string;
+  email: string;
+  password_hash: string;
+  role: string;
+  plan: string;
+  active: boolean;
+  created_at: Date;
 }
 
-// ─── File I/O ─────────────────────────────────────────────────────────────────
+// ─── Helpers internos ─────────────────────────────────────────────────────────
 
-function readUsersFile(): UsersFile {
-  if (!fs.existsSync(USERS_FILE)) return { v: 1, users: [] };
-  try {
-    return JSON.parse(fs.readFileSync(USERS_FILE, "utf8")) as UsersFile;
-  } catch {
-    return { v: 1, users: [] };
-  }
+async function getTenantDomainsForUser(userId: string): Promise<string[]> {
+  const rows = await query<{ domain: string }>(
+    "SELECT domain FROM user_tenants WHERE user_id = $1 ORDER BY created_at",
+    [userId]
+  );
+  return rows.map((r) => r.domain);
 }
 
-function writeUsersFile(data: UsersFile): void {
-  const dir = path.dirname(USERS_FILE);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(USERS_FILE, JSON.stringify(data, null, 2), "utf8");
+function rowToRecord(row: UserRow, tenants: string[]): UserRecord {
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    passwordHash: row.password_hash,
+    role: "owner",
+    tenants,
+    plan: "free",
+    active: row.active,
+    createdAt: new Date(row.created_at).toISOString(),
+  };
 }
 
-// ─── Queries ──────────────────────────────────────────────────────────────────
+// ─── Queries públicas ─────────────────────────────────────────────────────────
 
-export function listUsers(): UserRecord[] {
-  return readUsersFile().users;
-}
-
-export function findUserByEmail(email: string): UserRecord | null {
-  return (
-    readUsersFile().users.find(
-      (u) => u.email.toLowerCase() === email.toLowerCase()
-    ) ?? null
+export async function listUsers(): Promise<UserRecord[]> {
+  await initDatabase();
+  const rows = await query<UserRow>("SELECT * FROM users ORDER BY created_at DESC");
+  return Promise.all(
+    rows.map(async (row) => {
+      const tenants = await getTenantDomainsForUser(row.id);
+      return rowToRecord(row, tenants);
+    })
   );
 }
 
-export function findUserById(id: string): UserRecord | null {
-  return readUsersFile().users.find((u) => u.id === id) ?? null;
+export async function findUserByEmail(email: string): Promise<UserRecord | null> {
+  await initDatabase();
+  const row = await queryOne<UserRow>(
+    "SELECT * FROM users WHERE LOWER(email) = LOWER($1)",
+    [email]
+  );
+  if (!row) return null;
+  const tenants = await getTenantDomainsForUser(row.id);
+  return rowToRecord(row, tenants);
 }
 
-export function getUserTenants(userId: string): string[] {
-  return findUserById(userId)?.tenants ?? [];
+export async function findUserById(id: string): Promise<UserRecord | null> {
+  await initDatabase();
+  const row = await queryOne<UserRow>("SELECT * FROM users WHERE id = $1", [id]);
+  if (!row) return null;
+  const tenants = await getTenantDomainsForUser(row.id);
+  return rowToRecord(row, tenants);
 }
 
-export function canUserCreateStore(userId: string): boolean {
-  const user = findUserById(userId);
-  if (!user || !user.active) return false;
-  return user.tenants.length < MAX_FREE_STORES;
+export async function getUserTenants(userId: string): Promise<string[]> {
+  await initDatabase();
+  return getTenantDomainsForUser(userId);
 }
 
-// ─── Mutations ────────────────────────────────────────────────────────────────
+export async function canUserCreateStore(userId: string): Promise<boolean> {
+  await initDatabase();
+  const row = await queryOne<{ count: string }>(
+    "SELECT COUNT(*)::text AS count FROM user_tenants WHERE user_id = $1",
+    [userId]
+  );
+  return parseInt(row?.count ?? "0", 10) < MAX_FREE_STORES;
+}
+
+// ─── Mutações ─────────────────────────────────────────────────────────────────
 
 /**
- * Creates a new owner account.
- * Throws "EMAIL_TAKEN" if the email already exists.
+ * Cria uma nova conta de owner.
+ * Lança "EMAIL_TAKEN" se o e-mail já existir.
  */
 export async function createUser(params: {
   name: string;
   email: string;
   password: string;
 }): Promise<UserRecord> {
-  const file = readUsersFile();
+  await initDatabase();
+
   const emailNorm = params.email.toLowerCase().trim();
-
-  if (file.users.some((u) => u.email.toLowerCase() === emailNorm)) {
-    throw new Error("EMAIL_TAKEN");
-  }
-
   const passwordHash = await bcrypt.hash(params.password, 10);
-  const user: UserRecord = {
-    id: `usr_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-    name: params.name.trim(),
-    email: emailNorm,
-    passwordHash,
-    role: "owner",
-    tenants: [],
-    plan: "free",
-    active: true,
-    createdAt: new Date().toISOString(),
-  };
+  const id = `usr_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 
-  file.users.push(user);
-  writeUsersFile(file);
-  return user;
+  try {
+    const row = await queryOne<UserRow>(
+      `INSERT INTO users (id, name, email, password_hash, role, plan, active)
+       VALUES ($1, $2, $3, $4, 'owner', 'free', true)
+       RETURNING *`,
+      [id, params.name.trim(), emailNorm, passwordHash]
+    );
+    if (!row) throw new Error("INSERT sem retorno");
+    return rowToRecord(row, []);
+  } catch (err: unknown) {
+    // Violação de UNIQUE no email → código PostgreSQL 23505
+    if ((err as { code?: string }).code === "23505") {
+      throw new Error("EMAIL_TAKEN");
+    }
+    throw err;
+  }
 }
 
 /**
- * Verifies email + password.
- * Returns the user if valid and active, or null otherwise.
+ * Verifica email + senha.
+ * Retorna o UserRecord se válido e ativo, ou null.
  */
 export async function verifyUserPassword(
   email: string,
   password: string
 ): Promise<UserRecord | null> {
-  const user = findUserByEmail(email);
+  const user = await findUserByEmail(email);
   if (!user || !user.active) return null;
   const ok = await bcrypt.compare(password, user.passwordHash);
   return ok ? user : null;
 }
 
 /**
- * Links a tenant domain to a user account.
- * Idempotent — does nothing if already linked.
+ * Vincula um domínio de tenant a um usuário.
+ * Idempotente — ON CONFLICT DO NOTHING.
  */
-export function linkTenantToUser(userId: string, domain: string): void {
-  const file = readUsersFile();
-  const user = file.users.find((u) => u.id === userId);
-  if (!user) throw new Error("USER_NOT_FOUND");
-  if (!user.tenants.includes(domain)) {
-    user.tenants.push(domain);
-    writeUsersFile(file);
-  }
+export async function linkTenantToUser(userId: string, domain: string): Promise<void> {
+  await initDatabase();
+  await query(
+    "INSERT INTO user_tenants (user_id, domain) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+    [userId, domain]
+  );
 }
 
 /**
- * Removes a domain from ALL users' tenant lists.
- * Called when a tenant is deleted.
+ * Remove um domínio de TODOS os vínculos de usuários.
+ * Chamado quando um tenant é excluído.
  */
-export function unlinkTenantFromAllUsers(domain: string): void {
-  const file = readUsersFile();
-  let changed = false;
-  for (const user of file.users) {
-    const before = user.tenants.length;
-    user.tenants = user.tenants.filter((t) => t !== domain);
-    if (user.tenants.length !== before) changed = true;
-  }
-  if (changed) writeUsersFile(file);
+export async function unlinkTenantFromAllUsers(domain: string): Promise<void> {
+  await initDatabase();
+  await query("DELETE FROM user_tenants WHERE domain = $1", [domain]);
 }
 
 /**
- * Finds which userId owns a given tenant domain.
- * Returns null if no owner is found (e.g., legacy master-created stores).
+ * Retorna o userId do dono de um tenant (ou null se for loja do master).
  */
-export function findOwnerOfTenant(domain: string): string | null {
-  const { users } = readUsersFile();
-  return users.find((u) => u.tenants.includes(domain))?.id ?? null;
+export async function findOwnerOfTenant(domain: string): Promise<string | null> {
+  await initDatabase();
+  const row = await queryOne<{ user_id: string }>(
+    "SELECT user_id FROM user_tenants WHERE domain = $1 LIMIT 1",
+    [domain]
+  );
+  return row?.user_id ?? null;
 }

@@ -40,7 +40,7 @@ export async function DELETE(
 
   // Owner só pode excluir lojas que lhe pertencem
   if (payload.role === "owner") {
-    const ownerId = findOwnerOfTenant(decodedDomain);
+    const ownerId = await findOwnerOfTenant(decodedDomain);
     if (ownerId !== payload.userId) {
       return NextResponse.json({ message: "Não autorizado" }, { status: 403 });
     }
@@ -52,7 +52,7 @@ export async function DELETE(
   }
 
   // Remove o vínculo do tenant de todos os usuários
-  unlinkTenantFromAllUsers(decodedDomain);
+  await unlinkTenantFromAllUsers(decodedDomain);
 
   return NextResponse.json({ message: "Loja removida com sucesso" });
 }

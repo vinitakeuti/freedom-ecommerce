@@ -36,8 +36,8 @@ export async function GET(req: NextRequest) {
   if (payload.role === "master") {
     domains = listTenants();
   } else if (payload.role === "owner" && payload.userId) {
-    // Re-lê do arquivo para ter a lista atualizada (o JWT pode estar desatualizado)
-    const user = findUserById(payload.userId);
+    // Re-lê do DB para ter a lista atualizada (o JWT pode estar desatualizado)
+    const user = await findUserById(payload.userId);
     domains = user?.tenants ?? [];
   } else {
     return NextResponse.json({ message: "Não autorizado" }, { status: 401 });
@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
 
   // Owners: verificar limite de lojas gratuitas
   if (payload.role === "owner") {
-    if (!payload.userId || !canUserCreateStore(payload.userId)) {
+    if (!payload.userId || !(await canUserCreateStore(payload.userId))) {
       return NextResponse.json(
         {
           message: `Limite de ${MAX_FREE_STORES} lojas gratuitas atingido. Entre em contato para mais lojas.`,
@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
 
     // Vincula o tenant ao usuário owner
     if (payload.role === "owner" && payload.userId) {
-      linkTenantToUser(payload.userId, normalized);
+      await linkTenantToUser(payload.userId, normalized);
     }
 
     return NextResponse.json(

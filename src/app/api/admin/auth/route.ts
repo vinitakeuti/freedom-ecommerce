@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     if (!authorized && email && password) {
       const user = await verifyUserPassword(email, password);
       if (user) {
-        const ownerId = findOwnerOfTenant(tenant);
+        const ownerId = await findOwnerOfTenant(tenant);
         if (ownerId === user.id) {
           authorized = true;
         }
