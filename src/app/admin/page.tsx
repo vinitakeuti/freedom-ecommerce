@@ -3777,6 +3777,23 @@ function SettingsSection({
 
     const heroLines = (heroTitle || "Descubra os Melhores\nProdutos").split("\n");
 
+    const heroSection = showHero && (
+      <section className={`preview-hero preview-hero--align-${heroAlign}`}>
+        <div className="preview-hero-content">
+          {heroTag && <span className="preview-hero-tag" style={{ background: "var(--accent-dim)", color: "var(--accent)" }}>{heroTag}</span>}
+          <h1 className="preview-hero-title">
+            {heroLines.map((line, i) => (
+              <Fragment key={i}>
+                {i > 0 && <br />}
+                {line}
+              </Fragment>
+            ))}
+          </h1>
+          <p className="preview-hero-subtitle">{heroSubtitle || "Os melhores produtos."}</p>
+        </div>
+      </section>
+    );
+
     return (
       <div className="store-preview-container" style={previewStyles}>
         {/* Marquee Banner (Above) */}
@@ -3810,23 +3827,8 @@ function SettingsSection({
         {/* Marquee Banner (Below) */}
         {!marqueeAbove && marqueeBar}
 
-        {/* Hero Section */}
-        {showHero && (
-          <section className={`preview-hero preview-hero--align-${heroAlign}`} style={{ order: heroPosition === "before-banner" ? -1 : 1 }}>
-            <div className="preview-hero-content">
-              {heroTag && <span className="preview-hero-tag" style={{ background: "var(--accent-dim)", color: "var(--accent)" }}>{heroTag}</span>}
-              <h1 className="preview-hero-title">
-                {heroLines.map((line, i) => (
-                  <Fragment key={i}>
-                    {i > 0 && <br />}
-                    {line}
-                  </Fragment>
-                ))}
-              </h1>
-              <p className="preview-hero-subtitle">{heroSubtitle || "Os melhores produtos."}</p>
-            </div>
-          </section>
-        )}
+        {/* Hero Section (Before Banner) */}
+        {heroPosition === "before-banner" && heroSection}
 
         {/* Mock Top Banner */}
         <div className="preview-banner-placeholder">
@@ -3834,6 +3836,9 @@ function SettingsSection({
             <span>Banner de Destaque</span>
           </div>
         </div>
+
+        {/* Hero Section (After Banner) */}
+        {heroPosition === "after-banner" && heroSection}
 
         {/* Product Catalog Mockup */}
         <div className="preview-products-section">

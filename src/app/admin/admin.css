@@ -3239,7 +3239,7 @@
 /* Core Customizable Split-Screen Layout */
 .admin-settings-layout {
   display: grid;
-  grid-template-columns: 1.15fr 0.85fr;
+  grid-template-columns: 420px 1fr;
   gap: 28px;
   align-items: start;
 }
@@ -3369,7 +3369,9 @@
 /* ───────────────── Phone Simulator Mockup ───────────────── */
 .phone-device-frame {
   width: 280px;
-  height: 560px;
+  height: 100%;
+  max-height: 520px;
+  min-height: 380px;
   background: #000;
   border: 10px solid #1a1a1e;
   border-radius: 36px;
@@ -3378,6 +3380,7 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  flex-shrink: 0;
 }
 
 .phone-device-notch {
@@ -3409,8 +3412,10 @@
 /* ──────────────── Desktop Simulator Mockup ──────────────── */
 .browser-device-frame {
   width: 100%;
-  max-width: 480px;
-  height: 500px;
+  max-width: 100%;
+  height: 100%;
+  max-height: 520px;
+  min-height: 380px;
   background: #000;
   border: 1px solid var(--adm-border);
   border-radius: 12px;
@@ -3418,6 +3423,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .browser-device-header {
