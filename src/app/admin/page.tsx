@@ -3676,121 +3676,247 @@ function StorePreviewMockup({
     "--gradient":     `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
   } as React.CSSProperties;
 
-  const active = activeSectionKey;
-  const hlCls = (keys: string[]) => (keys.includes(active ?? "") ? "pm-hl" : "");
-
-  const marqueeTexts = [marqueeText1, marqueeText2, marqueeText3].filter(Boolean);
-  const marqueeAbove = marqueePosition === "above-nav";
-
-  const MarqueeBar = marqueeTexts.length > 0 ? (
-    <div className={`pm-marquee ${hlCls(["faixa"])}`} style={{ background: primaryColor, color: btnTextColor }}>
-      {active === "faixa" && <span className="pm-label">Faixa</span>}
-      <span>{marqueeTexts.join("  •  ")}</span>
-    </div>
-  ) : null;
-
-  const heroLines = (heroTitle || "Descubra os Melhores\nProdutos").split("\n");
-
-  const HeroSection = showHero ? (
-    <section className={`pm-hero pm-hero--${heroAlign} ${hlCls(["hero"])}`}>
-      {active === "hero" && <span className="pm-label">Hero</span>}
-      {heroTag && <span className="pm-hero-tag" style={{ background: `rgba(${primaryRgb},0.15)`, color: primaryColor }}>{heroTag}</span>}
-      <h1 className="pm-hero-title" style={{ color: titleColor }}>
-        {heroLines.map((ln, i) => <Fragment key={i}>{i > 0 && <br />}{ln}</Fragment>)}
-      </h1>
-      <p className="pm-hero-sub" style={{ color: textColor }}>{heroSubtitle || "Os melhores produtos."}</p>
-    </section>
-  ) : null;
-
-  return (
-    <div className={`pm-root ${active === "cores" ? "pm-hl-border" : ""}`} style={css}>
-      {active === "cores" && <span className="pm-label pm-label--global">Cores da Loja</span>}
-
-      {marqueeAbove && MarqueeBar}
-
-      {/* Navbar */}
-      <header className={`pm-header ${stickyHeader ? "pm-header--sticky" : ""} ${hlCls(["navbar","identidade"])}`}
-        style={{ background: headerColor }}>
-        {(active === "navbar" || active === "identidade") && (
-          <span className="pm-label">{active === "identidade" ? "Identidade" : "Navbar"}</span>
-        )}
-        <div className={`pm-header-inner pm-header-inner--${logoPosition}`}>
-          <div className="pm-logo">
+  switch (activeSectionKey) {
+    case "identidade": {
+      return (
+        <div className="vgu-widget vgu-identidade" style={css}>
+          <div className="vgu-badge-section">Identidade Visual</div>
+          <div className="vgu-logo-demo" style={{ justifyContent: logoPosition === "left" ? "flex-start" : logoPosition === "center" ? "center" : "flex-end" }}>
             {logoDisplay !== "text-only" && (
               logoUrl
-                ? <img src={logoUrl} alt="logo" style={{ height: `${Math.max(14, logoSize * 0.28)}px`, maxWidth: 48, objectFit: "contain" }} />
-                : <span style={{ fontSize: `${Math.max(14, logoSize * 0.28)}px`, lineHeight: 1 }}>{logo || "🛍️"}</span>
+                ? <img src={logoUrl} alt="logo" style={{ height: `${logoSize}px`, maxWidth: "100%", objectFit: "contain" }} />
+                : <span style={{ fontSize: `${logoSize}px`, lineHeight: 1 }}>{logo || "🛍️"}</span>
             )}
             {logoDisplay !== "image-only" && (
-              <span className="pm-logo-text" style={{ color: titleColor }}>{storeName || "Minha Loja"}</span>
+              <span className="vgu-logo-text" style={{ color: titleColor }}>{storeName || "Minha Loja"}</span>
             )}
           </div>
-          <div className="pm-header-actions" style={{ color: titleColor }}>
-            <IconUser />
-            <span style={{ position: "relative", display: "inline-flex" }}>
-              <IconBag />
-              <span className="pm-badge" style={{ background: primaryColor, color: btnTextColor }}>2</span>
-            </span>
+          <div className="vgu-meta-info">
+            <div><strong>Nome:</strong> {storeName || "Minha Loja"}</div>
+            <div><strong>Alinhamento:</strong> {logoPosition === "left" ? "Esquerda" : logoPosition === "center" ? "Centro" : "Direita"}</div>
+            <div><strong>Tamanho da Logo:</strong> {logoSize}px</div>
           </div>
         </div>
-      </header>
-
-      {!marqueeAbove && MarqueeBar}
-
-      {heroPosition === "before-banner" && HeroSection}
-
-      {/* Banner placeholder */}
-      <div className="pm-banner">
-        <span style={{ color: textColor, opacity: 0.4, fontSize: "0.65rem", fontWeight: 700 }}>Banner</span>
-      </div>
-
-      {heroPosition === "after-banner" && HeroSection}
-
-      {/* Products */}
-      <div className={`pm-products ${hlCls(["cards","tipografia"])}`}>
-        {(active === "cards" || active === "tipografia") && (
-          <span className="pm-label">{active === "cards" ? "Cards" : "Tipografia"}</span>
-        )}
-        <div className="pm-products-header">
-          <span className="pm-products-title" style={{ color: titleColor }}>Produtos</span>
-          <span style={{ color: textColor, fontSize: "0.62rem" }}>2 itens</span>
-        </div>
-        <div className={`pm-grid pm-cards-${cardStyle}`}>
-          {MOCK_PRODUCTS.map((p) => (
-            <div key={p.id} className="pm-card" style={{ background: bgCard, borderColor: borderCol, borderRadius: cardRadius }}>
-              <div className="pm-card-img-wrap">
-                {p.badge && <span className="pm-card-badge" style={{ background: `linear-gradient(135deg,${primaryColor},${secondaryColor})`, color: btnTextColor }}>{p.badge}</span>}
-                <div className="pm-card-img">🖼️</div>
+      );
+    }
+    case "navbar": {
+      return (
+        <div className="vgu-widget vgu-navbar" style={css}>
+          <div className="vgu-badge-section">Navbar (Cabeçalho)</div>
+          <div className="vgu-nav-container" style={{ background: headerColor, border: `1px solid ${borderCol}` }}>
+            <div className="vgu-nav-inner" style={{ flexDirection: logoPosition === "right" ? "row-reverse" : "row" }}>
+              <div className="vgu-logo-demo-mini">
+                {logoDisplay !== "text-only" && (
+                  logoUrl
+                    ? <img src={logoUrl} alt="logo" style={{ height: `${Math.max(16, logoSize * 0.4)}px`, maxWidth: 64, objectFit: "contain" }} />
+                    : <span style={{ fontSize: `${Math.max(16, logoSize * 0.4)}px` }}>{logo || "🛍️"}</span>
+                )}
+                {logoDisplay !== "image-only" && (
+                  <span className="vgu-logo-text-mini" style={{ color: titleColor }}>{storeName || "Minha Loja"}</span>
+                )}
               </div>
-              <div className="pm-card-body" style={{ textAlign: productTitleAlign }}>
-                <span className="pm-card-cat" style={{ color: primaryColor }}>{p.cat}</span>
-                <div className="pm-card-name" style={{ color: titleColor }}>{p.name}</div>
-                <div className="pm-card-desc" style={{ color: textColor }}>{p.desc}</div>
-                <div className="pm-card-footer">
+              <div className="vgu-nav-actions" style={{ color: titleColor }}>
+                <IconUser />
+                <span className="vgu-cart-mini">
+                  <IconBag />
+                  <span className="vgu-badge-count" style={{ background: primaryColor, color: btnTextColor }}>3</span>
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="vgu-meta-info">
+            <div><strong>Fundo da Navbar:</strong> <span className="vgu-color-dot" style={{ background: headerColor }} /> {headerColor}</div>
+            <div><strong>Fixar no topo (Sticky):</strong> {stickyHeader ? "Sim (Ativo)" : "Não"}</div>
+          </div>
+        </div>
+      );
+    }
+    case "faixa": {
+      const marqueeTexts = [marqueeText1, marqueeText2, marqueeText3].filter(Boolean);
+      return (
+        <div className="vgu-widget vgu-faixa" style={css}>
+          <div className="vgu-badge-section">Faixa de Destaque</div>
+          {marqueeTexts.length > 0 ? (
+            <div className="vgu-marquee-preview" style={{ background: primaryColor, color: btnTextColor }}>
+              <div className="vgu-marquee-text-track">
+                <span>{marqueeTexts.join("  •  ")}</span>
+              </div>
+            </div>
+          ) : (
+            <div className="vgu-empty-state">Preencha ao menos o Texto 1 para ativar a faixa.</div>
+          )}
+          <div className="vgu-meta-info">
+            <div><strong>Posicionamento:</strong> {marqueePosition === "above-nav" ? "Acima da Navbar" : "Abaixo da Navbar"}</div>
+            <div><strong>Cor de Fundo:</strong> <span className="vgu-color-dot" style={{ background: primaryColor }} /> {primaryColor}</div>
+            <div><strong>Cor do Texto:</strong> <span className="vgu-color-dot" style={{ background: btnTextColor }} /> {btnTextColor}</div>
+          </div>
+        </div>
+      );
+    }
+    case "hero": {
+      const heroLines = (heroTitle || "Descubra os Melhores\nProdutos").split("\n");
+      return (
+        <div className="vgu-widget vgu-hero" style={css}>
+          <div className="vgu-badge-section">Seção Hero (Boas-Vindas)</div>
+          {showHero ? (
+            <div className="vgu-hero-demo" style={{ textAlign: heroAlign, alignItems: heroAlign === "center" ? "center" : "flex-start", background: `radial-gradient(circle at top right, rgba(${primaryRgb}, 0.08), transparent 70%)` }}>
+              {heroTag && <span className="vgu-hero-tag" style={{ background: `rgba(${primaryRgb},0.15)`, color: primaryColor }}>{heroTag}</span>}
+              <h2 className="vgu-hero-title" style={{ color: titleColor }}>
+                {heroLines.map((ln, i) => <Fragment key={i}>{i > 0 && <br />}{ln}</Fragment>)}
+              </h2>
+              <p className="vgu-hero-sub" style={{ color: textColor }}>{heroSubtitle || "Os melhores produtos com as melhores ofertas."}</p>
+            </div>
+          ) : (
+            <div className="vgu-empty-state">Seção Hero desativada nas configurações.</div>
+          )}
+          <div className="vgu-meta-info">
+            <div><strong>Exibição:</strong> {showHero ? "Ativa" : "Oculta"}</div>
+            <div><strong>Alinhamento:</strong> {heroAlign === "center" ? "Centralizado" : "À Esquerda"}</div>
+            <div><strong>Posição do Banner:</strong> {heroPosition === "before-banner" ? "Antes do Banner" : "Depois do Banner"}</div>
+          </div>
+        </div>
+      );
+    }
+    case "cores": {
+      return (
+        <div className="vgu-widget vgu-cores" style={css}>
+          <div className="vgu-badge-section">Paleta de Cores & Botões</div>
+          <div className="vgu-colors-grid">
+            <div className="vgu-color-card">
+              <span className="vgu-color-swatch" style={{ background: primaryColor }} />
+              <div className="vgu-color-card-info">
+                <span>Principal</span>
+                <strong>{primaryColor}</strong>
+              </div>
+            </div>
+            <div className="vgu-color-card">
+              <span className="vgu-color-swatch" style={{ background: secondaryColor }} />
+              <div className="vgu-color-card-info">
+                <span>Secundária</span>
+                <strong>{secondaryColor}</strong>
+              </div>
+            </div>
+            <div className="vgu-color-card">
+              <span className="vgu-color-swatch" style={{ background: tertiaryColor }} />
+              <div className="vgu-color-card-info">
+                <span>Fundo Geral</span>
+                <strong>{tertiaryColor}</strong>
+              </div>
+            </div>
+            <div className="vgu-color-card">
+              <span className="vgu-color-swatch" style={{ background: headerColor }} />
+              <div className="vgu-color-card-info">
+                <span>Navbar</span>
+                <strong>{headerColor}</strong>
+              </div>
+            </div>
+          </div>
+
+          <div className="vgu-buttons-demo" style={{ background: tertiaryColor, border: `1px solid ${borderCol}` }}>
+            <div style={{ fontSize: "0.75rem", color: textColor, marginBottom: 8, opacity: 0.7 }}>Demonstração de Botões & Arredondamento ({borderRadius})</div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button type="button" className="vgu-btn-test primary" style={{ background: primaryColor, color: btnTextColor, borderRadius }}>
+                Botão Principal
+              </button>
+              <button type="button" className="vgu-btn-test gradient" style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`, color: btnTextColor, borderRadius }}>
+                Botão Degradê
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    case "tipografia": {
+      return (
+        <div className="vgu-widget vgu-tipografia" style={css}>
+          <div className="vgu-badge-section">Tipografia & Textos</div>
+          <div className="vgu-typo-sheet">
+            <div className="vgu-typo-font-badge">
+              Fonte Selecionada: <strong>{fontFamily}</strong> (Peso: {fontWeight})
+            </div>
+            <h1 style={{ color: titleColor, fontWeight, fontSize: "1.4rem", margin: "0 0 6px" }}>
+              Título Principal
+            </h1>
+            <h3 style={{ color: titleColor, fontWeight: Math.max(300, fontWeight - 100), fontSize: "1rem", margin: "0 0 10px" }}>
+              Subtítulo ou Categoria
+            </h3>
+            <p style={{ color: textColor, fontSize: "0.8rem", margin: "0 0 14px", lineHeight: 1.4 }}>
+              Este é um exemplo de texto corrido. As descrições curtas dos produtos e os detalhes de texto na loja utilizarão essa cor e peso de fonte.
+            </p>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 10, borderTop: `1px dashed ${borderCol}` }}>
+              <div>
+                <span style={{ display: "block", fontSize: "0.65rem", color: textColor }}>Preço do Produto</span>
+                <span style={{ fontSize: "1.1rem", fontWeight: 800, color: priceColor }}>R$ 199,90</span>
+              </div>
+              <button type="button" style={{ background: primaryColor, color: btnTextColor, borderRadius, border: "none", padding: "6px 12px", fontSize: "0.75rem", fontWeight: 650 }}>
+                Comprar
+              </button>
+            </div>
+          </div>
+          <div className="vgu-meta-info">
+            <div><strong>Alinhamento dos Títulos:</strong> {productTitleAlign === "left" ? "Alinhado à esquerda" : "Centralizado"}</div>
+          </div>
+        </div>
+      );
+    }
+    case "cards": {
+      const mockP = {
+        name: "Smartwatch Ultra Pro",
+        desc: "AMOLED · NFC · Oxímetro de Pulso Integrado",
+        price: 299.90,
+        oldPrice: 399.90,
+        cat: "Eletrônicos",
+        badge: "Oferta"
+      };
+      return (
+        <div className="vgu-widget vgu-cards" style={css}>
+          <div className="vgu-badge-section">Estilo dos Cards de Produto</div>
+          <div className="vgu-card-container">
+            <div className={`vgu-product-card vgu-card-style-${cardStyle}`} style={{ background: bgCard, borderColor: borderCol, borderRadius: cardRadius }}>
+              <div className="vgu-card-img-wrap">
+                {mockP.badge && (
+                  <span className="vgu-card-badge" style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`, color: btnTextColor }}>
+                    {mockP.badge}
+                  </span>
+                )}
+                <div className="vgu-card-img-placeholder">🖼️</div>
+              </div>
+              <div className="vgu-card-body" style={{ textAlign: productTitleAlign }}>
+                <span className="vgu-card-cat" style={{ color: primaryColor }}>{mockP.cat}</span>
+                <div className="vgu-card-name" style={{ color: titleColor }}>{mockP.name}</div>
+                <div className="vgu-card-desc" style={{ color: textColor }}>{mockP.desc}</div>
+                <div className="vgu-card-footer">
                   <div>
-                    {p.oldPrice && <s className="pm-card-old" style={{ color: textColor }}>R$ {p.oldPrice.toFixed(2).replace(".",",")}</s>}
-                    <span className="pm-card-price" style={{ color: priceColor }}>R$ {p.price.toFixed(2).replace(".",",")}</span>
+                    {mockP.oldPrice && <s className="vgu-card-old" style={{ color: textColor }}>R$ {mockP.oldPrice.toFixed(2).replace(".", ",")}</s>}
+                    <span className="vgu-card-price" style={{ color: priceColor }}>R$ {mockP.price.toFixed(2).replace(".", ",")}</span>
                   </div>
-                  <button type="button" className="pm-card-btn" style={{ background: primaryColor, color: btnTextColor, borderRadius }}>Comprar</button>
+                  <button type="button" className="vgu-card-btn" style={{ background: primaryColor, color: btnTextColor, borderRadius }}>
+                    Comprar
+                  </button>
                 </div>
               </div>
             </div>
-          ))}
+          </div>
+          <div className="vgu-meta-info">
+            <div><strong>Estilo:</strong> {cardStyle.toUpperCase()}</div>
+            <div><strong>Arredondamento do Card:</strong> {cardRadius}</div>
+          </div>
         </div>
-      </div>
-
-      {/* Footer */}
-      <footer className="pm-footer" style={{ borderColor: borderCol }}>
-        <div className="pm-footer-icons" style={{ color: textColor }}>
-          <span><IconTruck /> Frete</span>
-          <span><IconCard /> 12x</span>
-          <span><IconTag /> Pix</span>
+      );
+    }
+    default: {
+      return (
+        <div className="vgu-widget vgu-intro" style={css}>
+          <div className="vgu-badge-section">Aparência da Loja</div>
+          <div className="vgu-intro-content">
+            <div className="vgu-intro-icon">🎨</div>
+            <h3>Seletor de Guia Visual</h3>
+            <p>Posicione o cursor do mouse sobre qualquer uma das seções de edição ao lado para carregar a pré-visualização isolada do componente correspondente.</p>
+          </div>
         </div>
-        <div className="pm-footer-name" style={{ color: titleColor }}>{storeName || "Minha Loja"}</div>
-        <div className="pm-footer-copy" style={{ color: textColor }}>© 2026. Todos os direitos reservados.</div>
-      </footer>
-    </div>
-  );
+      );
+    }
+  }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -3939,7 +4065,6 @@ function SettingsSection({
 
   // Estados locais para controlar a pré-visualização lateral e destaque ativo
   const [activeSectionKey, setActiveSectionKey] = useState<"identidade" | "navbar" | "faixa" | "hero" | "cores" | "tipografia" | "cards" | null>("identidade");
-  const [previewMode, setPreviewMode] = useState<"mobile" | "desktop">("mobile");
   const [mobileTab, setMobileTab] = useState<"edit" | "preview">("edit");
 
   // Map font family
@@ -4389,53 +4514,18 @@ function SettingsSection({
           </div>
         </div>
 
-        {/* Live Preview Pane (Right) */}
+        {/* Live Preview Pane (Right) - Simplified Visual Guide */}
         <div className="admin-settings-preview-pane">
           <div className="admin-preview-controls">
-            <span className="admin-preview-title">Pré-visualização da Loja</span>
-            <div className="admin-preview-mode-switch">
-              <button
-                type="button"
-                className={`admin-preview-switch-btn ${previewMode === "mobile" ? "active" : ""}`}
-                onClick={() => setPreviewMode("mobile")}
-              >
-                Celular
-              </button>
-              <button
-                type="button"
-                className={`admin-preview-switch-btn ${previewMode === "desktop" ? "active" : ""}`}
-                onClick={() => setPreviewMode("desktop")}
-              >
-                Computador
-              </button>
-            </div>
+            <span className="admin-preview-title">Guia Visual de Edição</span>
+            <span style={{ fontSize: "0.72rem", color: "var(--adm-text-muted)", display: "flex", alignItems: "center", gap: "6px" }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#10b981" }} />
+              Destaque Ativo
+            </span>
           </div>
 
-          <div className={`admin-preview-viewport-wrapper mode-${previewMode}`}>
-            {previewMode === "mobile" ? (
-              <div className="phone-device-frame">
-                <div className="phone-device-notch" />
-                <div className="phone-device-screen">
-                  <StorePreviewMockup {...previewProps} />
-                </div>
-              </div>
-            ) : (
-              <div className="browser-device-frame">
-                <div className="browser-device-header">
-                  <div className="browser-dots">
-                    <span className="dot dot-red" />
-                    <span className="dot dot-yellow" />
-                    <span className="dot dot-green" />
-                  </div>
-                  <div className="browser-address-bar">
-                    <span>{storeName ? storeName.toLowerCase().replace(/\s+/g, "") : "sualoja"}.com.br</span>
-                  </div>
-                </div>
-                <div className="browser-device-content">
-                  <StorePreviewMockup {...previewProps} />
-                </div>
-              </div>
-            )}
+          <div className="admin-preview-viewport-wrapper">
+            <StorePreviewMockup {...previewProps} />
           </div>
         </div>
       </div>
