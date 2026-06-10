@@ -3540,41 +3540,26 @@ function SettingsGroup({
   title,
   children,
   id,
-  isOpen,
-  onToggle,
+  onActive,
 }: {
   step: number;
   title: string;
   children: ReactNode;
   id?: string;
-  isOpen: boolean;
-  onToggle: () => void;
+  onActive?: () => void;
 }) {
   return (
-    <div className={`settings-group ${isOpen ? "settings-group--open" : ""}`} id={id}>
-      <div className="settings-group-header" onClick={onToggle} style={{ cursor: "pointer", userSelect: "none" }}>
+    <div
+      className="settings-group"
+      id={id}
+      onMouseEnter={onActive}
+      onFocusCapture={onActive}
+    >
+      <div className="settings-group-header">
         <span className="settings-group-step">{step}</span>
-        <span className="settings-group-title" style={{ flex: 1 }}>{title}</span>
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          style={{
-            transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
-            transition: "transform 0.2s ease",
-            opacity: 0.6,
-            marginLeft: 8,
-          }}
-        >
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
+        <span className="settings-group-title">{title}</span>
       </div>
-      <div className="settings-group-body" style={{ display: isOpen ? "block" : "none" }}>
+      <div className="settings-group-body">
         {children}
       </div>
     </div>
@@ -3691,14 +3676,29 @@ function SettingsSection({
   const [borderRadius, setBorderRadius] = useState(data.borderRadius || "14px");
   const [cardRadius,   setCardRadius]   = useState(data.cardRadius   || data.borderRadius || "14px");
 
-  // Estados locais para controlar acordeão e preview lateral
-  const [activeStep, setActiveStep] = useState<number | null>(1);
+  // Estados locais para controlar a pré-visualização lateral e destaque ativo
+  const [activeSectionKey, setActiveSectionKey] = useState<"identidade" | "navbar" | "faixa" | "hero" | "cores" | "tipografia" | "cards" | null>("identidade");
   const [previewMode, setPreviewMode] = useState<"mobile" | "desktop">("mobile");
   const [mobileTab, setMobileTab] = useState<"edit" | "preview">("edit");
 
-  // Componente de pré-visualização em tempo real da loja
+  // Map font family
+  const GOOGLE_FONT_MAP: Record<string, string> = {
+    "Inter":            "Inter:wght@300;400;500;600;700;800",
+    "Roboto":           "Roboto:wght@300;400;500;600;700;800",
+    "Poppins":          "Poppins:wght@300;400;500;600;700;800",
+    "Montserrat":       "Montserrat:wght@300;400;500;600;700;800",
+    "Raleway":          "Raleway:wght@300;400;500;600;700;800",
+    "Nunito":           "Nunito:wght@300;400;500;600;700;800",
+    "Lato":             "Lato:wght@300;400;700",
+    "Oswald":           "Oswald:wght@300;400;500;600;700",
+    "Playfair Display": "Playfair+Display:wght@400;500;600;700;800",
+    "DM Sans":          "DM+Sans:wght@300;400;500;600;700",
+  };
+  const fontParam = GOOGLE_FONT_MAP[fontFamily] ?? GOOGLE_FONT_MAP["Inter"];
+  const googleFontsUrl = `https://fonts.googleapis.com/css2?family=${fontParam}&display=swap`;
+
+  // Componente de pré-visualização em tempo real da loja (mockup leve)
   const StorePreview = () => {
-    // Função para converter hexadecimal para RGB para usar com classes e variáveis CSS
     const getRgbFromHex = (hexColor: string) => {
       const cleanHex = hexColor.replace("#", "");
       if (cleanHex.length === 6) {
@@ -3707,7 +3707,7 @@ function SettingsSection({
         const b = parseInt(cleanHex.substring(4, 6), 16);
         return `${r}, ${g}, ${b}`;
       }
-      return "139, 92, 246"; // fallback violeta
+      return "139, 92, 246";
     };
 
     const primaryRgb = getRgbFromHex(primaryColor);
@@ -3741,8 +3741,54 @@ function SettingsSection({
     } as React.CSSProperties;
 
     const marqueeTexts = [marqueeText1, marqueeText2, marqueeText3].filter(Boolean);
+    
+    const IconUser = () => (
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+        <circle cx="12" cy="7" r="4" />
+      </svg>
+    );
+
+    const IconBag = () => (
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+        <line x1="3" y1="6" x2="21" y2="6" />
+        <path d="M16 10a4 4 0 0 1-8 0" />
+      </svg>
+    );
+
+    const IconTruck = () => (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <rect x="1" y="3" width="15" height="13" rx="1" />
+        <path d="M16 8h4l3 5v4h-7V8z" />
+        <circle cx="5.5" cy="18.5" r="2.5" />
+        <circle cx="18.5" cy="18.5" r="2.5" />
+      </svg>
+    );
+
+    const IconCard = () => (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <rect x="1" y="4" width="22" height="16" rx="2" />
+        <line x1="1" y1="10" x2="23" y2="10" />
+      </svg>
+    );
+
+    const IconTag = () => (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+        <circle cx="7" cy="7" r="1.5" fill="currentColor" stroke="none" />
+      </svg>
+    );
+
+    const IconPhone = () => (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.13 1 .37 1.97.72 2.91a2 2 0 0 1-.45 2.11L7.91 9a16 16 0 0 0 6.16 6.16l1.04-.96a2 2 0 0 1 2.11-.45c.94.35 1.91.59 2.91.72A2 2 0 0 1 22 16.92z" />
+      </svg>
+    );
+
     const marqueeBar = marqueeTexts.length > 0 && (
-      <div className="preview-marquee" style={{ background: "var(--accent)", color: "var(--btn-text)" }}>
+      <div className={`preview-element preview-marquee ${activeSectionKey === "faixa" ? "highlighted" : ""}`} style={{ background: "var(--accent)", color: "var(--btn-text)" }}>
+        {activeSectionKey === "faixa" && <span className="preview-element-label">Faixa de Destaque</span>}
         <div className="preview-marquee-track">
           <span>{marqueeTexts[0]}</span>
           {marqueeTexts.length > 1 && <span className="preview-marquee-separator">•</span>}
@@ -3778,7 +3824,8 @@ function SettingsSection({
     const heroLines = (heroTitle || "Descubra os Melhores\nProdutos").split("\n");
 
     const heroSection = showHero && (
-      <section className={`preview-hero preview-hero--align-${heroAlign}`}>
+      <section className={`preview-element preview-hero preview-hero--align-${heroAlign} ${activeSectionKey === "hero" ? "highlighted" : ""}`}>
+        {activeSectionKey === "hero" && <span className="preview-element-label">Hero</span>}
         <div className="preview-hero-content">
           {heroTag && <span className="preview-hero-tag" style={{ background: "var(--accent-dim)", color: "var(--accent)" }}>{heroTag}</span>}
           <h1 className="preview-hero-title">
@@ -3795,19 +3842,24 @@ function SettingsSection({
     );
 
     return (
-      <div className="store-preview-container" style={previewStyles}>
+      <div className={`store-preview-container ${activeSectionKey === "cores" ? "highlighted-border" : ""}`} style={previewStyles}>
+        {activeSectionKey === "cores" && <span className="preview-element-label global-theme-label">Cores da Loja</span>}
+
         {/* Marquee Banner (Above) */}
         {marqueeAbove && marqueeBar}
 
         {/* Header/Navbar */}
-        <header className={`preview-header ${stickyHeader ? "preview-header--sticky" : ""}`}>
+        <header className={`preview-element preview-header ${stickyHeader ? "preview-header--sticky" : ""} ${activeSectionKey === "navbar" || activeSectionKey === "identidade" ? "highlighted" : ""}`}>
+          {(activeSectionKey === "navbar" || activeSectionKey === "identidade") && (
+            <span className="preview-element-label">{activeSectionKey === "identidade" ? "Identidade" : "Navbar"}</span>
+          )}
           <div className={`preview-header-inner preview-header-inner--logo-${logoPosition}`}>
             <div className="preview-header-logo">
               {logoDisplay !== "text-only" && (logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={logoUrl} alt="Logo" style={{ height: `${logoSize * 0.45}px`, maxWidth: "80px", objectFit: "contain" }} />
+                <img src={logoUrl} alt="Logo" style={{ height: `${logoSize * 0.3}px`, maxWidth: "60px", objectFit: "contain" }} />
               ) : (
-                <span style={{ fontSize: `${logoSize * 0.45}px`, lineHeight: 1 }}>{logo || "🛍️"}</span>
+                <span style={{ fontSize: `${logoSize * 0.3}px`, lineHeight: 1 }}>{logo || "🛍️"}</span>
               ))}
               {logoDisplay !== "image-only" && (
                 <span className="preview-header-logo-text">{storeName || "Minha Loja"}</span>
@@ -3815,9 +3867,9 @@ function SettingsSection({
             </div>
 
             <div className="preview-header-actions">
-              <span className="preview-icon">🔍</span>
+              <span className="preview-icon"><IconUser /></span>
               <span className="preview-icon" style={{ position: "relative" }}>
-                🛒
+                <IconBag />
                 <span className="preview-cart-badge" style={{ background: "var(--accent)", color: "var(--btn-text)" }}>2</span>
               </span>
             </div>
@@ -3841,7 +3893,10 @@ function SettingsSection({
         {heroPosition === "after-banner" && heroSection}
 
         {/* Product Catalog Mockup */}
-        <div className="preview-products-section">
+        <div className={`preview-element preview-products-section ${activeSectionKey === "cards" || activeSectionKey === "tipografia" ? "highlighted" : ""}`}>
+          {(activeSectionKey === "cards" || activeSectionKey === "tipografia") && (
+            <span className="preview-element-label">{activeSectionKey === "cards" ? "Estilo do Card" : "Tipografia"}</span>
+          )}
           <div className="preview-section-header">
             <h2 className="preview-section-title">Todos os Produtos</h2>
             <span className="preview-product-count">2 produtos</span>
@@ -3883,8 +3938,12 @@ function SettingsSection({
 
         {/* Footer */}
         <footer className="preview-footer">
-          <p className="preview-footer-logo">{storeName || "Minha Loja"}</p>
-          <p className="preview-footer-tagline">{tagline || "Sua loja preferida."}</p>
+          <div style={{ display: "flex", justifyContent: "space-around", gap: 4, opacity: 0.8, fontSize: "0.6rem", paddingBottom: 8, borderBottom: "1px solid var(--border)", marginBottom: 8 }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 3 }}><IconTruck /> Frete</span>
+            <span style={{ display: "flex", alignItems: "center", gap: 3 }}><IconCard /> 12x</span>
+            <span style={{ display: "flex", alignItems: "center", gap: 3 }}><IconTag /> Pix</span>
+          </div>
+          <p className="preview-footer-logo" style={{ fontSize: "0.75rem" }}>{storeName || "Minha Loja"}</p>
           <p className="preview-footer-copy">© 2026. Todos os direitos reservados.</p>
         </footer>
       </div>
@@ -3893,6 +3952,7 @@ function SettingsSection({
 
   return (
     <div className="admin-settings-container">
+      <link rel="stylesheet" href={googleFontsUrl} />
       {/* Mobile tabs switches */}
       <div className="admin-settings-mobile-tabs">
         <button
@@ -3919,8 +3979,7 @@ function SettingsSection({
             step={1}
             title="Identidade da Loja"
             id="admin-section-settings-identidade"
-            isOpen={activeStep === 1}
-            onToggle={() => setActiveStep(activeStep === 1 ? null : 1)}
+            onActive={() => setActiveSectionKey("identidade")}
           >
             <div className="admin-form-grid">
               <div className="admin-form-field span-2">
@@ -3964,8 +4023,7 @@ function SettingsSection({
             step={2}
             title="Navbar"
             id="admin-section-settings-navbar"
-            isOpen={activeStep === 2}
-            onToggle={() => setActiveStep(activeStep === 2 ? null : 2)}
+            onActive={() => setActiveSectionKey("navbar")}
           >
             <div className="admin-form-grid">
               <div className="admin-form-field span-2">
@@ -4013,8 +4071,7 @@ function SettingsSection({
             step={3}
             title="Faixa de Destaque"
             id="admin-section-settings-faixa"
-            isOpen={activeStep === 3}
-            onToggle={() => setActiveStep(activeStep === 3 ? null : 3)}
+            onActive={() => setActiveSectionKey("faixa")}
           >
             <div className="admin-form-grid">
               <div className="admin-form-field">
@@ -4050,8 +4107,7 @@ function SettingsSection({
             step={4}
             title="Seção de Boas-vindas (Hero)"
             id="admin-section-settings-hero"
-            isOpen={activeStep === 4}
-            onToggle={() => setActiveStep(activeStep === 4 ? null : 4)}
+            onActive={() => setActiveSectionKey("hero")}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
               <label className="admin-toggle">
@@ -4140,8 +4196,7 @@ function SettingsSection({
             step={5}
             title="Cores e Aparência"
             id="admin-section-settings-cores"
-            isOpen={activeStep === 5}
-            onToggle={() => setActiveStep(activeStep === 5 ? null : 5)}
+            onActive={() => setActiveSectionKey("cores")}
           >
             <div className="admin-form-grid">
               <ColorField label="Cor Principal (Botões e Hover)" value={primaryColor}   onChange={setPrimaryColor} />
@@ -4165,8 +4220,7 @@ function SettingsSection({
             step={6}
             title="Tipografia"
             id="admin-section-settings-tipografia"
-            isOpen={activeStep === 6}
-            onToggle={() => setActiveStep(activeStep === 6 ? null : 6)}
+            onActive={() => setActiveSectionKey("tipografia")}
           >
             <div className="admin-form-grid">
               <div className="admin-form-field span-2">
@@ -4219,8 +4273,7 @@ function SettingsSection({
             step={7}
             title="Design dos Cards de Produto"
             id="admin-section-settings-cards"
-            isOpen={activeStep === 7}
-            onToggle={() => setActiveStep(activeStep === 7 ? null : 7)}
+            onActive={() => setActiveSectionKey("cards")}
           >
             {/* Card style */}
             <div style={{ marginBottom: 20 }}>

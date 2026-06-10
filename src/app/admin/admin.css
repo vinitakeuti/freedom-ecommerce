@@ -3996,3 +3996,65 @@
     max-width: 100% !important;
   }
 }
+
+/* ──────────────── Scoped Highlight/Interactive preview styling ──────────────── */
+.preview-element {
+  position: relative;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.preview-element.highlighted {
+  outline: 2px dashed var(--adm-accent) !important;
+  outline-offset: -2px !important;
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.25) !important;
+  border-radius: 4px;
+}
+
+.preview-element-label {
+  position: absolute;
+  top: -8px;
+  right: 8px;
+  background: var(--adm-accent);
+  color: #ffffff;
+  font-size: 8px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: all 0.2s ease;
+  pointer-events: none;
+  z-index: 100;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.preview-element.highlighted .preview-element-label {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Specific styling for store container highlight (colors section) */
+.store-preview-container.highlighted-border {
+  outline: 2px dashed var(--adm-accent) !important;
+  outline-offset: -2px !important;
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.2) !important;
+}
+
+.store-preview-container .global-theme-label {
+  top: 8px;
+  right: 8px;
+  font-size: 8px;
+}
+
+.store-preview-container.highlighted-border .global-theme-label {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Custom adjustment to let mock scroll independently */
+.browser-device-content, .phone-device-screen {
+  overflow-y: auto !important;
+}
+
