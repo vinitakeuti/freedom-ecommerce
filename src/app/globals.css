@@ -720,8 +720,8 @@ button {
 .product-old-price {
   font-size: 0.75rem;
   font-weight: 500;
-  color: inherit;
-  opacity: 0.45;
+  color: var(--price-color, var(--text));
+  opacity: 0.6;
   text-decoration: line-through;
   text-decoration-thickness: 1.5px;
   line-height: 1;
@@ -907,6 +907,7 @@ button {
   font-size: 0.92rem;
 }
 .product-grid.cards-cinematic .product-price { color: #fff; }
+.product-grid.cards-cinematic .product-old-price { color: rgba(255, 255, 255, 0.6); }
 .product-grid.cards-cinematic .product-card-quick-add {
   display: none;
 }
