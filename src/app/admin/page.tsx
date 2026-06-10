@@ -582,7 +582,13 @@ export default function AdminPage() {
 
           {/* ── Settings ── */}
           {section === "settings" && data && (
-            <SettingsSection data={data} onSave={save} saving={saving} />
+            <SettingsSection
+              data={data}
+              onSave={save}
+              saving={saving}
+              activeSettingsAnchor={navSubHighlight?.section === "settings" ? navSubHighlight.id : null}
+              onSetActiveAnchor={(id) => setNavSubHighlight({ section: "settings", id })}
+            />
           )}
 
           {/* ── Pixels ── */}
@@ -3609,10 +3615,14 @@ function SettingsSection({
   data,
   onSave,
   saving,
+  activeSettingsAnchor,
+  onSetActiveAnchor,
 }: {
   data: StoreData;
   onSave: (p: Partial<StoreData>) => void;
   saving: boolean;
+  activeSettingsAnchor?: string | null;
+  onSetActiveAnchor?: (id: string) => void;
 }) {
   const [storeName, setStoreName] = useState(data.storeName);
   const [tagline, setTagline] = useState(data.storeTagline);
@@ -3677,353 +3687,406 @@ function SettingsSection({
   const [borderRadius, setBorderRadius] = useState(data.borderRadius || "14px");
   const [cardRadius,   setCardRadius]   = useState(data.cardRadius   || data.borderRadius || "14px");
 
-  // Estados locais para controlar a pré-visualização lateral e destaque ativo
-  // No states or previewProps.
+  const [activeTab, setActiveTab] = useState<string>("identidade");
+
+  useEffect(() => {
+    if (activeSettingsAnchor) {
+      const key = activeSettingsAnchor.replace("admin-section-settings-", "");
+      const validTabs = ["identidade", "navbar", "faixa", "hero", "cores", "tipografia", "cards"];
+      if (validTabs.includes(key)) {
+        setActiveTab(key);
+      }
+    }
+  }, [activeSettingsAnchor]);
+
+  const TABS = [
+    { key: "identidade", label: "Identidade", emoji: "🛍️" },
+    { key: "navbar", label: "Navbar", emoji: "⚿" },
+    { key: "faixa", label: "Faixa de Destaque", emoji: "📣" },
+    { key: "hero", label: "Hero (Boas-vindas)", emoji: "👋" },
+    { key: "cores", label: "Cores e Estilo", emoji: "🎨" },
+    { key: "tipografia", label: "Tipografia", emoji: "✍" },
+    { key: "cards", label: "Cards de Produto", emoji: "🎴" },
+  ];
 
   return (
     <div className="admin-settings-container">
+      <div className="admin-settings-tabs">
+        {TABS.map((tab) => {
+          const isActive = activeTab === tab.key;
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              className={`admin-settings-tab ${isActive ? "active" : ""}`}
+              onClick={() => {
+                setActiveTab(tab.key);
+                onSetActiveAnchor?.("admin-section-settings-" + tab.key);
+              }}
+            >
+              <span className="admin-settings-tab-icon">{tab.emoji}</span>
+              <span className="admin-settings-tab-label">{tab.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
       <div className="admin-settings-layout">
         <div className="admin-settings-editor">
           {/* ── 1. Identidade ── */}
-          <SettingsGroup
-            step={1}
-            title="Identidade da Loja"
-            id="admin-section-settings-identidade"
-          >
-            <div className="admin-form-grid">
-              <div className="admin-form-field span-2">
-                <label className="admin-form-label">Nome da Loja</label>
-                <input className="admin-form-input" value={storeName} onChange={(e) => setStoreName(e.target.value)} />
-              </div>
-              <div className="admin-form-field span-2">
-                <label className="admin-form-label">Tagline / Descrição</label>
-                <input className="admin-form-input" value={tagline} onChange={(e) => setTagline(e.target.value)} />
-              </div>
-              <div className="admin-form-field">
-                <label className="admin-form-label">Símbolo ou emoji no logo (texto)</label>
-                <input className="admin-form-input" value={logo} onChange={(e) => setLogo(e.target.value)} />
-              </div>
-              <div className="admin-form-field span-2">
-                <label className="admin-form-label">Logo (Imagem Principal)</label>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
-                  <label style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "var(--adm-bg-elevated)", border: "1.5px dashed var(--adm-border)", borderRadius: "8px", padding: "8px 14px", cursor: "pointer", fontSize: "0.85rem", fontWeight: 600, color: "var(--adm-text-muted)", transition: "all 0.18s ease", whiteSpace: "nowrap" }}
-                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--adm-accent)"; e.currentTarget.style.color = "var(--adm-accent-bright)"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--adm-border)"; e.currentTarget.style.color = "var(--adm-text-muted)"; }}>
-                    <input type="file" accept="image/*" style={{ display: "none" }} onChange={handleLogoUpload} disabled={uploading} />
-                    {uploading ? "Enviando…" : "Upload"}
-                  </label>
-                  <span style={{ fontSize: "0.8rem", color: "var(--adm-text-faint)" }}>ou</span>
-                  <input className="admin-form-input" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder="/uploads/logo.png ou https://..." style={{ marginBottom: 0, flex: 1 }} />
+          {activeTab === "identidade" && (
+            <SettingsGroup
+              step={1}
+              title="Identidade da Loja"
+              id="admin-section-settings-identidade"
+            >
+              <div className="admin-form-grid">
+                <div className="admin-form-field span-2">
+                  <label className="admin-form-label">Nome da Loja</label>
+                  <input className="admin-form-input" value={storeName} onChange={(e) => setStoreName(e.target.value)} />
                 </div>
-                {uploadError && <p style={{ fontSize: "0.8rem", color: "#fca5a5", marginBottom: "6px" }}>{uploadError}</p>}
-                {logoUrl && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 4 }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={logoUrl} alt="preview" style={{ height: 48, maxWidth: 160, objectFit: "contain", borderRadius: 6, background: "rgba(255,255,255,0.08)", padding: 6, border: "1px solid var(--adm-border)" }} />
-                    <button type="button" onClick={() => setLogoUrl("")} style={{ background: "none", border: "none", color: "#fca5a5", cursor: "pointer", fontSize: "0.78rem" }}>✕ Remover</button>
+                <div className="admin-form-field span-2">
+                  <label className="admin-form-label">Tagline / Descrição</label>
+                  <input className="admin-form-input" value={tagline} onChange={(e) => setTagline(e.target.value)} />
+                </div>
+                <div className="admin-form-field">
+                  <label className="admin-form-label">Símbolo ou emoji no logo (texto)</label>
+                  <input className="admin-form-input" value={logo} onChange={(e) => setLogo(e.target.value)} />
+                </div>
+                <div className="admin-form-field span-2">
+                  <label className="admin-form-label">Logo (Imagem Principal)</label>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+                    <label style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "var(--adm-bg-elevated)", border: "1.5px dashed var(--adm-border)", borderRadius: "8px", padding: "8px 14px", cursor: "pointer", fontSize: "0.85rem", fontWeight: 600, color: "var(--adm-text-muted)", transition: "all 0.18s ease", whiteSpace: "nowrap" }}
+                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--adm-accent)"; e.currentTarget.style.color = "var(--adm-accent-bright)"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--adm-border)"; e.currentTarget.style.color = "var(--adm-text-muted)"; }}>
+                      <input type="file" accept="image/*" style={{ display: "none" }} onChange={handleLogoUpload} disabled={uploading} />
+                      {uploading ? "Enviando…" : "Upload"}
+                    </label>
+                    <span style={{ fontSize: "0.8rem", color: "var(--adm-text-faint)" }}>ou</span>
+                    <input className="admin-form-input" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder="/uploads/logo.png ou https://..." style={{ marginBottom: 0, flex: 1 }} />
                   </div>
-                )}
+                  {uploadError && <p style={{ fontSize: "0.8rem", color: "#fca5a5", marginBottom: "6px" }}>{uploadError}</p>}
+                  {logoUrl && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 4 }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={logoUrl} alt="preview" style={{ height: 48, maxWidth: 160, objectFit: "contain", borderRadius: 6, background: "rgba(255,255,255,0.08)", padding: 6, border: "1px solid var(--adm-border)" }} />
+                      <button type="button" onClick={() => setLogoUrl("")} style={{ background: "none", border: "none", color: "#fca5a5", cursor: "pointer", fontSize: "0.78rem" }}>✕ Remover</button>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          </SettingsGroup>
+            </SettingsGroup>
+          )}
 
           {/* ── 2. Navbar ── */}
-          <SettingsGroup
-            step={2}
-            title="Navbar"
-            id="admin-section-settings-navbar"
-          >
-            <div className="admin-form-grid">
-              <div className="admin-form-field span-2">
-                <label className="admin-form-label">Exibição da Logo</label>
-                <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
-                  {([
-                    { value: "image-text", label: "Imagem + Texto" },
-                    { value: "image-only", label: "Só Imagem" },
-                    { value: "text-only",  label: "Só Texto" },
-                  ] as const).map((opt) => (
-                    <button key={opt.value} type="button" onClick={() => setLogoDisplay(opt.value)} style={{ flex: 1, padding: "8px 6px", borderRadius: 8, fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", border: logoDisplay === opt.value ? "2px solid var(--adm-accent)" : "1.5px solid var(--adm-border)", background: logoDisplay === opt.value ? "var(--adm-accent-dim)" : "var(--adm-bg-elevated)", color: logoDisplay === opt.value ? "var(--adm-accent-bright)" : "var(--adm-text-muted)", transition: "all 0.18s ease" }}>
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="admin-form-field span-2">
-                <label className="admin-form-label">Posição da Logo</label>
-                <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
-                  {(["left","center","right"] as const).map((pos) => (
-                    <button key={pos} type="button" onClick={() => setLogoPosition(pos)} style={{ flex: 1, padding: "8px 4px", borderRadius: 8, fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", border: logoPosition === pos ? "2px solid var(--adm-accent)" : "1.5px solid var(--adm-border)", background: logoPosition === pos ? "var(--adm-accent-dim)" : "var(--adm-bg-elevated)", color: logoPosition === pos ? "var(--adm-accent-bright)" : "var(--adm-text-muted)", transition: "all 0.18s ease" }}>
-                      {pos === "left" ? "⬅ Esquerda" : pos === "center" ? "↔ Centro" : "➡ Direita"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="admin-form-field span-2">
-                <label className="admin-form-label">Tamanho da Logo — {logoSize}px</label>
-                <input type="range" min={20} max={110} step={2} value={logoSize} onChange={(e) => setLogoSize(Number(e.target.value))} style={{ width: "100%", accentColor: "var(--adm-accent)", marginTop: 6 }} />
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.74rem", color: "var(--adm-text-faint)", marginTop: 4 }}><span>20px</span><span>{logoSize}px</span><span>110px</span></div>
-              </div>
-              <ColorField label="Cor de Fundo da Navbar" value={headerColor} onChange={setHeaderColor} />
-              <div className="admin-form-field" style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <label className="admin-toggle">
-                  <input type="checkbox" checked={stickyHeader} onChange={(e) => setStickyHeader(e.target.checked)} />
-                  <span className="admin-toggle-slider" />
-                </label>
-                <span style={{ fontSize: "0.88rem", color: "var(--adm-text-muted)" }}>Fixar navbar no topo ao rolar</span>
-              </div>
-            </div>
-          </SettingsGroup>
-
-          {/* ── 3. Faixa de Destaque ── */}
-          <SettingsGroup
-            step={3}
-            title="Faixa de Destaque"
-            id="admin-section-settings-faixa"
-          >
-            <div className="admin-form-grid">
-              <div className="admin-form-field">
-                <label className="admin-form-label">Texto 1 (obrigatório)</label>
-                <input className="admin-form-input" value={marqueeText1} onChange={(e) => setMarqueeText1(e.target.value)} placeholder="ex: Frete grátis acima de R$ 199" />
-              </div>
-              <div className="admin-form-field">
-                <label className="admin-form-label">Texto 2 (opcional)</label>
-                <input className="admin-form-input" value={marqueeText2} onChange={(e) => setMarqueeText2(e.target.value)} placeholder="ex: Compra segura" />
-              </div>
-              <div className="admin-form-field span-2">
-                <label className="admin-form-label">Texto 3 (opcional)</label>
-                <input className="admin-form-input" value={marqueeText3} onChange={(e) => setMarqueeText3(e.target.value)} placeholder="ex: Até 12x sem juros" />
-              </div>
-              <div className="admin-form-field span-2">
-                <label className="admin-form-label">Posição da Faixa</label>
-                <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
-                  {([
-                    { value: "below-nav", label: "⬇ Abaixo da Navbar" },
-                    { value: "above-nav", label: "⬆ Acima da Navbar" },
-                  ] as const).map((opt) => (
-                    <button key={opt.value} type="button" onClick={() => setMarqueePosition(opt.value)} style={{ flex: 1, padding: "9px 6px", borderRadius: 8, fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", border: marqueePosition === opt.value ? "2px solid var(--adm-accent)" : "1.5px solid var(--adm-border)", background: marqueePosition === opt.value ? "var(--adm-accent-dim)" : "var(--adm-bg-elevated)", color: marqueePosition === opt.value ? "var(--adm-accent-bright)" : "var(--adm-text-muted)", transition: "all 0.18s ease" }}>
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </SettingsGroup>
-
-          {/* ── 4. Hero ── */}
-          <SettingsGroup
-            step={4}
-            title="Seção de Boas-vindas (Hero)"
-            id="admin-section-settings-hero"
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
-              <label className="admin-toggle">
-                <input type="checkbox" checked={showHero} onChange={(e) => setShowHero(e.target.checked)} />
-                <span className="admin-toggle-slider" />
-              </label>
-              <div>
-                <div style={{ fontSize: "0.9rem", color: "var(--adm-text)", fontWeight: 500 }}>Exibir seção Hero na página inicial</div>
-                <div style={{ fontSize: "0.78rem", color: "var(--adm-text-faint)", marginTop: 2 }}>Textos editáveis abaixo. Pode ficar vazia a etiqueta superior.</div>
-              </div>
-            </div>
-
-            {showHero && (
-              <>
-                <div className="admin-form-field span-2" style={{ marginBottom: 16 }}>
-                  <label className="admin-form-label">Posição em relação ao banner de topo</label>
-                  <div style={{ display: "flex", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
-                    {([
-                      { value: "after-banner" as const, label: "Depois do banner", sub: "Padrão — hero abaixo das imagens" },
-                      { value: "before-banner" as const, label: "Antes do banner", sub: "Hero aparece primeiro" },
-                    ]).map((opt) => (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        onClick={() => setHeroPosition(opt.value)}
-                        style={{
-                          flex: "1 1 200px", padding: "10px 12px", borderRadius: 8, textAlign: "left",
-                          cursor: "pointer", border: heroPosition === opt.value ? "2px solid var(--adm-accent)" : "1.5px solid var(--adm-border)",
-                          background: heroPosition === opt.value ? "var(--adm-accent-dim)" : "var(--adm-bg-elevated)",
-                          color: "var(--adm-text-muted)", transition: "all 0.18s ease",
-                        }}
-                      >
-                        <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--adm-text)" }}>{opt.label}</div>
-                        <div style={{ fontSize: "0.72rem", marginTop: 4, opacity: 0.85 }}>{opt.sub}</div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="admin-form-field span-2" style={{ marginBottom: 16 }}>
-                  <label className="admin-form-label">Alinhamento do texto do Hero</label>
+          {activeTab === "navbar" && (
+            <SettingsGroup
+              step={2}
+              title="Navbar"
+              id="admin-section-settings-navbar"
+            >
+              <div className="admin-form-grid">
+                <div className="admin-form-field span-2">
+                  <label className="admin-form-label">Exibição da Logo</label>
                   <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
                     {([
-                      { value: "center" as const, label: "Centralizado" },
-                      { value: "left" as const, label: "À esquerda" },
-                    ]).map((opt) => (
-                      <button key={opt.value} type="button" onClick={() => setHeroAlign(opt.value)} style={{ flex: 1, padding: "9px 8px", borderRadius: 8, fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", border: heroAlign === opt.value ? "2px solid var(--adm-accent)" : "1.5px solid var(--adm-border)", background: heroAlign === opt.value ? "var(--adm-accent-dim)" : "var(--adm-bg-elevated)", color: heroAlign === opt.value ? "var(--adm-accent-bright)" : "var(--adm-text-muted)", transition: "all 0.18s ease" }}>
+                      { value: "image-text", label: "Imagem + Texto" },
+                      { value: "image-only", label: "Só Imagem" },
+                      { value: "text-only",  label: "Só Texto" },
+                    ] as const).map((opt) => (
+                      <button key={opt.value} type="button" onClick={() => setLogoDisplay(opt.value)} style={{ flex: 1, padding: "8px 6px", borderRadius: 8, fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", border: logoDisplay === opt.value ? "2px solid var(--adm-accent)" : "1.5px solid var(--adm-border)", background: logoDisplay === opt.value ? "var(--adm-accent-dim)" : "var(--adm-bg-elevated)", color: logoDisplay === opt.value ? "var(--adm-accent-bright)" : "var(--adm-text-muted)", transition: "all 0.18s ease" }}>
                         {opt.label}
                       </button>
                     ))}
                   </div>
                 </div>
+                <div className="admin-form-field span-2">
+                  <label className="admin-form-label">Posição da Logo</label>
+                  <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                    {(["left","center","right"] as const).map((pos) => (
+                      <button key={pos} type="button" onClick={() => setLogoPosition(pos)} style={{ flex: 1, padding: "8px 4px", borderRadius: 8, fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", border: logoPosition === pos ? "2px solid var(--adm-accent)" : "1.5px solid var(--adm-border)", background: logoPosition === pos ? "var(--adm-accent-dim)" : "var(--adm-bg-elevated)", color: logoPosition === pos ? "var(--adm-accent-bright)" : "var(--adm-text-muted)", transition: "all 0.18s ease" }}>
+                        {pos === "left" ? "⬅ Esquerda" : pos === "center" ? "↔ Centro" : "➡ Direita"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="admin-form-field span-2">
+                  <label className="admin-form-label">Tamanho da Logo — {logoSize}px</label>
+                  <input type="range" min={20} max={110} step={2} value={logoSize} onChange={(e) => setLogoSize(Number(e.target.value))} style={{ width: "100%", accentColor: "var(--adm-accent)", marginTop: 6 }} />
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.74rem", color: "var(--adm-text-faint)", marginTop: 4 }}><span>20px</span><span>{logoSize}px</span><span>110px</span></div>
+                </div>
+                <ColorField label="Cor de Fundo da Navbar" value={headerColor} onChange={setHeaderColor} />
+                <div className="admin-form-field" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <label className="admin-toggle">
+                    <input type="checkbox" checked={stickyHeader} onChange={(e) => setStickyHeader(e.target.checked)} />
+                    <span className="admin-toggle-slider" />
+                  </label>
+                  <span style={{ fontSize: "0.88rem", color: "var(--adm-text-muted)" }}>Fixar navbar no topo ao rolar</span>
+                </div>
+              </div>
+            </SettingsGroup>
+          )}
 
-                <div className="admin-form-field span-2">
-                  <label className="admin-form-label">Etiqueta (badge) — opcional</label>
-                  <input className="admin-form-input" value={heroTag} onChange={(e) => setHeroTag(e.target.value)} placeholder="ex: Nova coleção disponível" />
-                  <p style={{ fontSize: "0.74rem", color: "var(--adm-text-faint)", marginTop: 6 }}>Deixe em branco para ocultar a etiqueta.</p>
+          {/* ── 3. Faixa de Destaque ── */}
+          {activeTab === "faixa" && (
+            <SettingsGroup
+              step={3}
+              title="Faixa de Destaque"
+              id="admin-section-settings-faixa"
+            >
+              <div className="admin-form-grid">
+                <div className="admin-form-field">
+                  <label className="admin-form-label">Texto 1 (obrigatório)</label>
+                  <input className="admin-form-input" value={marqueeText1} onChange={(e) => setMarqueeText1(e.target.value)} placeholder="ex: Frete grátis acima de R$ 199" />
+                </div>
+                <div className="admin-form-field">
+                  <label className="admin-form-label">Texto 2 (opcional)</label>
+                  <input className="admin-form-input" value={marqueeText2} onChange={(e) => setMarqueeText2(e.target.value)} placeholder="ex: Compra segura" />
                 </div>
                 <div className="admin-form-field span-2">
-                  <label className="admin-form-label">Título principal</label>
-                  <textarea
-                    className="admin-form-textarea"
-                    rows={3}
-                    value={heroTitle}
-                    onChange={(e) => setHeroTitle(e.target.value)}
-                    placeholder="Uma linha ou várias — use Enter para quebrar"
-                    style={{ minHeight: 72 }}
-                  />
+                  <label className="admin-form-label">Texto 3 (opcional)</label>
+                  <input className="admin-form-input" value={marqueeText3} onChange={(e) => setMarqueeText3(e.target.value)} placeholder="ex: Até 12x sem juros" />
                 </div>
                 <div className="admin-form-field span-2">
-                  <label className="admin-form-label">Subtítulo</label>
-                  <textarea
-                    className="admin-form-textarea"
-                    rows={3}
-                    value={heroSubtitle}
-                    onChange={(e) => setHeroSubtitle(e.target.value)}
-                    placeholder="Texto de apoio abaixo do título"
-                  />
+                  <label className="admin-form-label">Posição da Faixa</label>
+                  <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                    {([
+                      { value: "below-nav", label: "⬇ Abaixo da Navbar" },
+                      { value: "above-nav", label: "⬆ Acima da Navbar" },
+                    ] as const).map((opt) => (
+                      <button key={opt.value} type="button" onClick={() => setMarqueePosition(opt.value)} style={{ flex: 1, padding: "9px 6px", borderRadius: 8, fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", border: marqueePosition === opt.value ? "2px solid var(--adm-accent)" : "1.5px solid var(--adm-border)", background: marqueePosition === opt.value ? "var(--adm-accent-dim)" : "var(--adm-bg-elevated)", color: marqueePosition === opt.value ? "var(--adm-accent-bright)" : "var(--adm-text-muted)", transition: "all 0.18s ease" }}>
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </>
-            )}
-          </SettingsGroup>
+              </div>
+            </SettingsGroup>
+          )}
+
+          {/* ── 4. Hero ── */}
+          {activeTab === "hero" && (
+            <SettingsGroup
+              step={4}
+              title="Seção de Boas-vindas (Hero)"
+              id="admin-section-settings-hero"
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
+                <label className="admin-toggle">
+                  <input type="checkbox" checked={showHero} onChange={(e) => setShowHero(e.target.checked)} />
+                  <span className="admin-toggle-slider" />
+                </label>
+                <div>
+                  <div style={{ fontSize: "0.9rem", color: "var(--adm-text)", fontWeight: 500 }}>Exibir seção Hero na página inicial</div>
+                  <div style={{ fontSize: "0.78rem", color: "var(--adm-text-faint)", marginTop: 2 }}>Textos editáveis abaixo. Pode ficar vazia a etiqueta superior.</div>
+                </div>
+              </div>
+
+              {showHero && (
+                <>
+                  <div className="admin-form-field span-2" style={{ marginBottom: 16 }}>
+                    <label className="admin-form-label">Posição em relação ao banner de topo</label>
+                    <div style={{ display: "flex", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
+                      {([
+                        { value: "after-banner" as const, label: "Depois do banner", sub: "Padrão — hero abaixo das imagens" },
+                        { value: "before-banner" as const, label: "Antes do banner", sub: "Hero aparece primeiro" },
+                      ]).map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => setHeroPosition(opt.value)}
+                          style={{
+                            flex: "1 1 200px", padding: "10px 12px", borderRadius: 8, textAlign: "left",
+                            cursor: "pointer", border: heroPosition === opt.value ? "2px solid var(--adm-accent)" : "1.5px solid var(--adm-border)",
+                            background: heroPosition === opt.value ? "var(--adm-accent-dim)" : "var(--adm-bg-elevated)",
+                            color: "var(--adm-text-muted)", transition: "all 0.18s ease",
+                          }}
+                        >
+                          <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--adm-text)" }}>{opt.label}</div>
+                          <div style={{ fontSize: "0.72rem", marginTop: 4, opacity: 0.85 }}>{opt.sub}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="admin-form-field span-2" style={{ marginBottom: 16 }}>
+                    <label className="admin-form-label">Alinhamento do texto do Hero</label>
+                    <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                      {([
+                        { value: "center" as const, label: "Centralizado" },
+                        { value: "left" as const, label: "À esquerda" },
+                      ]).map((opt) => (
+                        <button key={opt.value} type="button" onClick={() => setHeroAlign(opt.value)} style={{ flex: 1, padding: "9px 8px", borderRadius: 8, fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", border: heroAlign === opt.value ? "2px solid var(--adm-accent)" : "1.5px solid var(--adm-border)", background: heroAlign === opt.value ? "var(--adm-accent-dim)" : "var(--adm-bg-elevated)", color: heroAlign === opt.value ? "var(--adm-accent-bright)" : "var(--adm-text-muted)", transition: "all 0.18s ease" }}>
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="admin-form-field span-2">
+                    <label className="admin-form-label">Etiqueta (badge) — opcional</label>
+                    <input className="admin-form-input" value={heroTag} onChange={(e) => setHeroTag(e.target.value)} placeholder="ex: Nova coleção disponível" />
+                    <p style={{ fontSize: "0.74rem", color: "var(--adm-text-faint)", marginTop: 6 }}>Deixe em branco para ocultar a etiqueta.</p>
+                  </div>
+                  <div className="admin-form-field span-2">
+                    <label className="admin-form-label">Título principal</label>
+                    <textarea
+                      className="admin-form-textarea"
+                      rows={3}
+                      value={heroTitle}
+                      onChange={(e) => setHeroTitle(e.target.value)}
+                      placeholder="Uma linha ou várias — use Enter para quebrar"
+                      style={{ minHeight: 72 }}
+                    />
+                  </div>
+                  <div className="admin-form-field span-2">
+                    <label className="admin-form-label">Subtítulo</label>
+                    <textarea
+                      className="admin-form-textarea"
+                      rows={3}
+                      value={heroSubtitle}
+                      onChange={(e) => setHeroSubtitle(e.target.value)}
+                      placeholder="Texto de apoio abaixo do título"
+                    />
+                  </div>
+                </>
+              )}
+            </SettingsGroup>
+          )}
 
           {/* ── 5. Cores ── */}
-          <SettingsGroup
-            step={5}
-            title="Cores e Aparência"
-            id="admin-section-settings-cores"
-          >
-            <div className="admin-form-grid">
-              <ColorField label="Cor Principal (Botões e Hover)" value={primaryColor}   onChange={setPrimaryColor} />
-              <ColorField label="Cor Secundária (Degradês)"      value={secondaryColor} onChange={setSecondaryColor} />
-              <ColorField label="Cor de Fundo da Loja"           value={tertiaryColor}  onChange={setTertiaryColor} />
-              <div className="admin-form-field">
-                <label className="admin-form-label">Arredondamento Geral — Botões, Modais, Inputs</label>
-                <select className="admin-form-select" value={borderRadius} onChange={(e) => setBorderRadius(e.target.value)}>
-                  <option value="0px">Retos (0px)</option>
-                  <option value="8px">Pouco Arredondados (8px)</option>
-                  <option value="14px">Arredondados — Padrão (14px)</option>
-                  <option value="24px">Bem Arredondados (24px)</option>
-                  <option value="999px">Pílula / Totalmente Arredondados</option>
-                </select>
+          {activeTab === "cores" && (
+            <SettingsGroup
+              step={5}
+              title="Cores e Aparência"
+              id="admin-section-settings-cores"
+            >
+              <div className="admin-form-grid">
+                <ColorField label="Cor Principal (Botões e Hover)" value={primaryColor}   onChange={setPrimaryColor} />
+                <ColorField label="Cor Secundária (Degradês)"      value={secondaryColor} onChange={setSecondaryColor} />
+                <ColorField label="Cor de Fundo da Loja"           value={tertiaryColor}  onChange={setTertiaryColor} />
+                <div className="admin-form-field">
+                  <label className="admin-form-label">Arredondamento Geral — Botões, Modais, Inputs</label>
+                  <select className="admin-form-select" value={borderRadius} onChange={(e) => setBorderRadius(e.target.value)}>
+                    <option value="0px">Retos (0px)</option>
+                    <option value="8px">Pouco Arredondados (8px)</option>
+                    <option value="14px">Arredondados — Padrão (14px)</option>
+                    <option value="24px">Bem Arredondados (24px)</option>
+                    <option value="999px">Pílula / Totalmente Arredondados</option>
+                  </select>
+                </div>
               </div>
-            </div>
-          </SettingsGroup>
+            </SettingsGroup>
+          )}
 
           {/* ── 6. Tipografia ── */}
-          <SettingsGroup
-            step={6}
-            title="Tipografia"
-            id="admin-section-settings-tipografia"
-          >
-            <div className="admin-form-grid">
-              <div className="admin-form-field span-2">
-                <label className="admin-form-label">Fonte Principal</label>
-                <select className="admin-form-select" value={fontFamily} onChange={(e) => setFontFamily(e.target.value)}>
-                  {["Inter","Roboto","Poppins","Montserrat","Raleway","Nunito","Lato","Oswald","Playfair Display","DM Sans"].map(f => (
-                    <option key={f} value={f}>{f}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="admin-form-field span-2">
-                <label className="admin-form-label">Peso / Boldness</label>
-                <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
-                  {([
-                    { value: 300, label: "Light" },
-                    { value: 400, label: "Regular" },
-                    { value: 500, label: "Medium" },
-                    { value: 600, label: "Semibold" },
-                    { value: 700, label: "Bold" },
-                  ] as const).map((opt) => (
-                    <button key={opt.value} type="button" onClick={() => setFontWeight(opt.value)} style={{ flex: 1, minWidth: 60, padding: "8px 4px", borderRadius: 8, fontSize: "0.78rem", fontWeight: opt.value, cursor: "pointer", border: fontWeight === opt.value ? "2px solid var(--adm-accent)" : "1.5px solid var(--adm-border)", background: fontWeight === opt.value ? "var(--adm-accent-dim)" : "var(--adm-bg-elevated)", color: fontWeight === opt.value ? "var(--adm-accent-bright)" : "var(--adm-text-muted)", transition: "all 0.18s ease" }}>
-                      {opt.label}
-                    </button>
-                  ))}
+          {activeTab === "tipografia" && (
+            <SettingsGroup
+              step={6}
+              title="Tipografia"
+              id="admin-section-settings-tipografia"
+            >
+              <div className="admin-form-grid">
+                <div className="admin-form-field span-2">
+                  <label className="admin-form-label">Fonte Principal</label>
+                  <select className="admin-form-select" value={fontFamily} onChange={(e) => setFontFamily(e.target.value)}>
+                    {["Inter","Roboto","Poppins","Montserrat","Raleway","Nunito","Lato","Oswald","Playfair Display","DM Sans"].map(f => (
+                      <option key={f} value={f}>{f}</option>
+                    ))}
+                  </select>
                 </div>
-              </div>
-              <div className="admin-form-field span-2">
-                <label className="admin-form-label">Títulos dos produtos (listagem)</label>
-                <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
-                  {([
-                    { value: "left" as const, label: "⬅ À esquerda" },
-                    { value: "center" as const, label: "↔ Centralizado" },
-                  ]).map((opt) => (
-                    <button key={opt.value} type="button" onClick={() => setProductTitleAlign(opt.value)} style={{ flex: 1, padding: "9px 8px", borderRadius: 8, fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", border: productTitleAlign === opt.value ? "2px solid var(--adm-accent)" : "1.5px solid var(--adm-border)", background: productTitleAlign === opt.value ? "var(--adm-accent-dim)" : "var(--adm-bg-elevated)", color: productTitleAlign === opt.value ? "var(--adm-accent-bright)" : "var(--adm-text-muted)", transition: "all 0.18s ease" }}>
-                      {opt.label}
-                    </button>
-                  ))}
+                <div className="admin-form-field span-2">
+                  <label className="admin-form-label">Peso / Boldness</label>
+                  <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
+                    {([
+                      { value: 300, label: "Light" },
+                      { value: 400, label: "Regular" },
+                      { value: 500, label: "Medium" },
+                      { value: 600, label: "Semibold" },
+                      { value: 700, label: "Bold" },
+                    ] as const).map((opt) => (
+                      <button key={opt.value} type="button" onClick={() => setFontWeight(opt.value)} style={{ flex: 1, minWidth: 60, padding: "8px 4px", borderRadius: 8, fontSize: "0.78rem", fontWeight: opt.value, cursor: "pointer", border: fontWeight === opt.value ? "2px solid var(--adm-accent)" : "1.5px solid var(--adm-border)", background: fontWeight === opt.value ? "var(--adm-accent-dim)" : "var(--adm-bg-elevated)", color: fontWeight === opt.value ? "var(--adm-accent-bright)" : "var(--adm-text-muted)", transition: "all 0.18s ease" }}>
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <p style={{ fontSize: "0.74rem", color: "var(--adm-text-faint)", marginTop: 8 }}>Nome e descrição curta nos cards da página inicial.</p>
+                <div className="admin-form-field span-2">
+                  <label className="admin-form-label">Títulos dos produtos (listagem)</label>
+                  <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                    {([
+                      { value: "left" as const, label: "⬅ À esquerda" },
+                      { value: "center" as const, label: "↔ Centralizado" },
+                    ]).map((opt) => (
+                      <button key={opt.value} type="button" onClick={() => setProductTitleAlign(opt.value)} style={{ flex: 1, padding: "9px 8px", borderRadius: 8, fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", border: productTitleAlign === opt.value ? "2px solid var(--adm-accent)" : "1.5px solid var(--adm-border)", background: productTitleAlign === opt.value ? "var(--adm-accent-dim)" : "var(--adm-bg-elevated)", color: productTitleAlign === opt.value ? "var(--adm-accent-bright)" : "var(--adm-text-muted)", transition: "all 0.18s ease" }}>
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                  <p style={{ fontSize: "0.74rem", color: "var(--adm-text-faint)", marginTop: 8 }}>Nome e descrição curta nos cards da página inicial.</p>
+                </div>
+                <ColorField label="Cor dos Títulos"   value={titleColor}   onChange={setTitleColor} />
+                <ColorField label="Cor das Descrições" value={textColor}    onChange={setTextColor} />
+                <ColorField label="Cor dos Preços"     value={priceColor}   onChange={setPriceColor} />
+                <ColorField label="Texto dos Botões"   value={btnTextColor} onChange={setBtnTextColor} />
               </div>
-              <ColorField label="Cor dos Títulos"   value={titleColor}   onChange={setTitleColor} />
-              <ColorField label="Cor das Descrições" value={textColor}    onChange={setTextColor} />
-              <ColorField label="Cor dos Preços"     value={priceColor}   onChange={setPriceColor} />
-              <ColorField label="Texto dos Botões"   value={btnTextColor} onChange={setBtnTextColor} />
-            </div>
-          </SettingsGroup>
+            </SettingsGroup>
+          )}
 
           {/* ── 7. Cards ── */}
-          <SettingsGroup
-            step={7}
-            title="Design dos Cards de Produto"
-            id="admin-section-settings-cards"
-          >
-            {/* Card style */}
-            <div style={{ marginBottom: 20 }}>
-              <label className="admin-form-label" style={{ marginBottom: 10, display: "block" }}>Estilo do Card</label>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-                {([
-                  { value: "default",   label: "Padrão",     sub: "Borda + sombra suave",       icon: "A" },
-                  { value: "minimal",   label: "Minimal",    sub: "Sem borda, sombra leve",     icon: "B" },
-                  { value: "clean",     label: "Clean",      sub: "Sem moldura, só conteúdo",   icon: "C" },
-                  { value: "bold",      label: "Bold",       sub: "Tipografia forte, barra accent", icon: "D" },
-                  { value: "neon",      label: "Neon",       sub: "Borda brilhante no hover",   icon: "E" },
-                  { value: "cinematic", label: "Cinemático", sub: "Texto sobre imagem",         icon: "F" },
-                ] as const).map((opt) => (
-                  <button key={opt.value} type="button" onClick={() => setCardStyle(opt.value)} style={{ padding: "12px 8px", borderRadius: 10, cursor: "pointer", textAlign: "center", border: cardStyle === opt.value ? "2px solid var(--adm-accent)" : "1.5px solid var(--adm-border)", background: cardStyle === opt.value ? "var(--adm-accent-dim)" : "var(--adm-bg-elevated)", color: cardStyle === opt.value ? "var(--adm-accent-bright)" : "var(--adm-text-muted)", transition: "all 0.18s ease" }}>
-                    <div style={{ fontSize: "0.75rem", fontWeight: 800, letterSpacing: "0.05em", color: "var(--adm-text-faint)", marginBottom: 4 }}>{opt.icon}</div>
-                    <div style={{ fontSize: "0.82rem", fontWeight: 700 }}>{opt.label}</div>
-                    <div style={{ fontSize: "0.69rem", opacity: 0.65, marginTop: 3 }}>{opt.sub}</div>
-                  </button>
-                ))}
+          {activeTab === "cards" && (
+            <SettingsGroup
+              step={7}
+              title="Design dos Cards de Produto"
+              id="admin-section-settings-cards"
+            >
+              {/* Card style */}
+              <div style={{ marginBottom: 20 }}>
+                <label className="admin-form-label" style={{ marginBottom: 10, display: "block" }}>Estilo do Card</label>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+                  {([
+                    { value: "default",   label: "Padrão",     sub: "Borda + sombra suave",       icon: "A" },
+                    { value: "minimal",   label: "Minimal",    sub: "Sem borda, sombra leve",     icon: "B" },
+                    { value: "clean",     label: "Clean",      sub: "Sem moldura, só conteúdo",   icon: "C" },
+                    { value: "bold",      label: "Bold",       sub: "Tipografia forte, barra accent", icon: "D" },
+                    { value: "neon",      label: "Neon",       sub: "Borda brilhante no hover",   icon: "E" },
+                    { value: "cinematic", label: "Cinemático", sub: "Texto sobre imagem",         icon: "F" },
+                  ] as const).map((opt) => (
+                    <button key={opt.value} type="button" onClick={() => setCardStyle(opt.value)} style={{ padding: "12px 8px", borderRadius: 10, cursor: "pointer", textAlign: "center", border: cardStyle === opt.value ? "2px solid var(--adm-accent)" : "1.5px solid var(--adm-border)", background: cardStyle === opt.value ? "var(--adm-accent-dim)" : "var(--adm-bg-elevated)", color: cardStyle === opt.value ? "var(--adm-accent-bright)" : "var(--adm-text-muted)", transition: "all 0.18s ease" }}>
+                      <div style={{ fontSize: "0.75rem", fontWeight: 800, letterSpacing: "0.05em", color: "var(--adm-text-faint)", marginBottom: 4 }}>{opt.icon}</div>
+                      <div style={{ fontSize: "0.82rem", fontWeight: 700 }}>{opt.label}</div>
+                      <div style={{ fontSize: "0.69rem", opacity: 0.65, marginTop: 3 }}>{opt.sub}</div>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            {/* Card border radius */}
-            <div>
-              <label className="admin-form-label" style={{ marginBottom: 10, display: "block" }}>Arredondamento dos Cards</label>
-              <div style={{ display: "flex", gap: 8 }}>
-                {([
-                  { value: "0px",   label: "Reto",      preview: "0" },
-                  { value: "8px",   label: "Suave",     preview: "8" },
-                  { value: "14px",  label: "Médio",     preview: "14" },
-                  { value: "20px",  label: "Arredond.", preview: "20" },
-                  { value: "28px",  label: "Grande",    preview: "28" },
-                ] as const).map((opt) => (
-                  <button key={opt.value} type="button" onClick={() => setCardRadius(opt.value)}
-                    style={{ flex: 1, padding: "10px 4px", cursor: "pointer", textAlign: "center",
-                      border: cardRadius === opt.value ? "2px solid var(--adm-accent)" : "1.5px solid var(--adm-border)",
-                      background: cardRadius === opt.value ? "var(--adm-accent-dim)" : "var(--adm-bg-elevated)",
-                      color: cardRadius === opt.value ? "var(--adm-accent-bright)" : "var(--adm-text-muted)",
-                      borderRadius: 8, transition: "all 0.18s ease",
-                    }}>
-                    <div style={{ width: 28, height: 22, margin: "0 auto 6px", background: "currentColor", opacity: 0.5, borderRadius: opt.value }} />
-                    <div style={{ fontSize: "0.75rem", fontWeight: 700 }}>{opt.label}</div>
-                  </button>
-                ))}
+              {/* Card border radius */}
+              <div>
+                <label className="admin-form-label" style={{ marginBottom: 10, display: "block" }}>Arredondamento dos Cards</label>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {([
+                    { value: "0px",   label: "Reto",      preview: "0" },
+                    { value: "8px",   label: "Suave",     preview: "8" },
+                    { value: "14px",  label: "Médio",     preview: "14" },
+                    { value: "20px",  label: "Arredond.", preview: "20" },
+                    { value: "28px",  label: "Grande",    preview: "28" },
+                  ] as const).map((opt) => (
+                    <button key={opt.value} type="button" onClick={() => setCardRadius(opt.value)}
+                      style={{ flex: 1, padding: "10px 4px", cursor: "pointer", textAlign: "center",
+                        border: cardRadius === opt.value ? "2px solid var(--adm-accent)" : "1.5px solid var(--adm-border)",
+                        background: cardRadius === opt.value ? "var(--adm-accent-dim)" : "var(--adm-bg-elevated)",
+                        color: cardRadius === opt.value ? "var(--adm-accent-bright)" : "var(--adm-text-muted)",
+                        borderRadius: 8, transition: "all 0.18s ease",
+                      }}>
+                      <div style={{ width: 28, height: 22, margin: "0 auto 6px", background: "currentColor", opacity: 0.5, borderRadius: opt.value }} />
+                      <div style={{ fontSize: "0.75rem", fontWeight: 700 }}>{opt.label}</div>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-          </SettingsGroup>
+            </SettingsGroup>
+          )}
 
           {/* ── Salvar ── */}
           <div className="admin-settings-save-panel">

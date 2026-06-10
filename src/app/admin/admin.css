@@ -3206,34 +3206,55 @@
   width: 100%;
 }
 
-/* Mobile Tabs Navigation (Hidden on Desktop) */
-.admin-settings-mobile-tabs {
-  display: none;
+/* Premium Tab Bar for Settings */
+.admin-settings-tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 6px;
   background: var(--adm-bg-sidebar);
   border: 1px solid var(--adm-border);
   border-radius: 12px;
-  padding: 4px;
-  margin-bottom: 20px;
-  gap: 4px;
+  margin-bottom: 24px;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none;  /* IE 10+ */
 }
 
-.admin-settings-tab-btn {
-  flex: 1;
-  padding: 10px;
+.admin-settings-tabs::-webkit-scrollbar {
+  display: none; /* Safari and Chrome */
+}
+
+.admin-settings-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
   border-radius: 8px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  text-align: center;
+  font-size: 0.88rem;
+  font-weight: 500;
   color: var(--adm-text-muted);
+  background: transparent;
+  border: 1px solid transparent;
   cursor: pointer;
-  transition: all var(--adm-transition);
-  border: none;
-  background: none;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
 }
 
-.admin-settings-tab-btn.active {
+.admin-settings-tab:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--adm-text);
+}
+
+.admin-settings-tab.active {
   background: var(--adm-accent-dim);
   color: var(--adm-accent-bright);
+  font-weight: 600;
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.admin-settings-tab-icon {
+  font-size: 1.05rem;
 }
 
 /* Core Customizable Single-Column Layout */
@@ -3287,7 +3308,9 @@
 .admin-settings-save-panel {
   position: sticky;
   bottom: 0;
-  background: var(--adm-bg);
+  background: rgba(9, 9, 11, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border-top: 1px solid var(--adm-border);
   padding: 16px 0;
   margin-top: 8px;
