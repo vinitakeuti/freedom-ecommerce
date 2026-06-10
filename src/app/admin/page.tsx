@@ -3533,6 +3533,267 @@ function BannersSection({
 }
 
 // ─────────────────────────────────────────────────────────────
+// StorePreviewMockup — lightweight inline mockup (NO iframe)
+// Must be a top-level component so React maintains its identity
+// between renders and never remounts the DOM tree.
+// ─────────────────────────────────────────────────────────────
+type StorePreviewProps = {
+  activeSectionKey: "identidade" | "navbar" | "faixa" | "hero" | "cores" | "tipografia" | "cards" | null;
+  storeName: string;
+  logo: string;
+  logoUrl: string;
+  logoDisplay: "image-text" | "image-only" | "text-only";
+  logoSize: number;
+  logoPosition: "left" | "center" | "right";
+  stickyHeader: boolean;
+  marqueeText1: string;
+  marqueeText2: string;
+  marqueeText3: string;
+  marqueePosition: "above-nav" | "below-nav";
+  showHero: boolean;
+  heroAlign: "left" | "center";
+  heroTag: string;
+  heroTitle: string;
+  heroSubtitle: string;
+  heroPosition: "before-banner" | "after-banner";
+  cardStyle: "default" | "minimal" | "clean" | "bold" | "neon" | "cinematic";
+  productTitleAlign: "left" | "center";
+  primaryColor: string;
+  secondaryColor: string;
+  tertiaryColor: string;
+  headerColor: string;
+  titleColor: string;
+  textColor: string;
+  priceColor: string;
+  btnTextColor: string;
+  borderRadius: string;
+  cardRadius: string;
+  fontFamily: string;
+  fontWeight: number;
+};
+
+function hexToRgb(hex: string): string {
+  const clean = hex.replace("#", "");
+  if (clean.length === 6) {
+    const r = parseInt(clean.slice(0, 2), 16);
+    const g = parseInt(clean.slice(2, 4), 16);
+    const b = parseInt(clean.slice(4, 6), 16);
+    return `${r}, ${g}, ${b}`;
+  }
+  return "139, 92, 246";
+}
+
+// Blend two hex colours: mix = (1-t)*base + t*blend
+function blendHex(base: string, blend: string, t: number): string {
+  const br = parseInt(base.replace("#","").slice(0,2), 16);
+  const bg = parseInt(base.replace("#","").slice(2,4), 16);
+  const bb = parseInt(base.replace("#","").slice(4,6), 16);
+  const lr = parseInt(blend.replace("#","").slice(0,2), 16);
+  const lg = parseInt(blend.replace("#","").slice(2,4), 16);
+  const lb = parseInt(blend.replace("#","").slice(4,6), 16);
+  const r = Math.round(br + (lr - br) * t);
+  const g = Math.round(bg + (lg - bg) * t);
+  const b = Math.round(bb + (lb - bb) * t);
+  return `rgb(${r},${g},${b})`;
+}
+
+const MOCK_PRODUCTS = [
+  { id: "m1", name: "Smartwatch Ultra Pro", desc: "AMOLED · NFC · Oxímetro", price: 299.90, oldPrice: 399.90, cat: "Eletrônicos", badge: "Oferta" },
+  { id: "m2", name: "Tênis Speed Runner", desc: "Amortecimento inteligente", price: 189.90, cat: "Esportes", badge: "Popular" },
+];
+
+function IconUser() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  );
+}
+function IconBag() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 0 1-8 0" />
+    </svg>
+  );
+}
+function IconTruck() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="1" y="3" width="15" height="13" rx="1" /><path d="M16 8h4l3 5v4h-7V8z" />
+      <circle cx="5.5" cy="18.5" r="2.5" /><circle cx="18.5" cy="18.5" r="2.5" />
+    </svg>
+  );
+}
+function IconCard() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="1" y="4" width="22" height="16" rx="2" /><line x1="1" y1="10" x2="23" y2="10" />
+    </svg>
+  );
+}
+function IconTag() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+      <circle cx="7" cy="7" r="1.5" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function StorePreviewMockup({
+  activeSectionKey,
+  storeName, logo, logoUrl, logoDisplay, logoSize, logoPosition, stickyHeader,
+  marqueeText1, marqueeText2, marqueeText3, marqueePosition,
+  showHero, heroAlign, heroTag, heroTitle, heroSubtitle, heroPosition,
+  cardStyle, productTitleAlign,
+  primaryColor, secondaryColor, tertiaryColor, headerColor,
+  titleColor, textColor, priceColor, btnTextColor,
+  borderRadius, cardRadius, fontFamily, fontWeight,
+}: StorePreviewProps) {
+  const primaryRgb = hexToRgb(primaryColor);
+  const bgCard = blendHex(tertiaryColor, titleColor, 0.05);
+  const borderCol = `rgba(${hexToRgb(titleColor)}, 0.12)`;
+
+  const css = {
+    fontFamily: `'${fontFamily}', -apple-system, sans-serif`,
+    fontWeight,
+    "--accent":       primaryColor,
+    "--accent-rgb":   primaryRgb,
+    "--accent-dim":   `rgba(${primaryRgb}, 0.15)`,
+    "--accent-glow":  `rgba(${primaryRgb}, 0.4)`,
+    "--bg":           tertiaryColor,
+    "--bg-card":      bgCard,
+    "--header-bg":    headerColor,
+    "--text":         titleColor,
+    "--text-muted":   textColor,
+    "--price-color":  priceColor,
+    "--btn-text":     btnTextColor,
+    "--border":       borderCol,
+    "--border-hover": `rgba(${primaryRgb}, 0.5)`,
+    "--radius":       borderRadius,
+    "--card-radius":  cardRadius,
+    "--gradient":     `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
+  } as React.CSSProperties;
+
+  const active = activeSectionKey;
+  const hlCls = (keys: string[]) => (keys.includes(active ?? "") ? "pm-hl" : "");
+
+  const marqueeTexts = [marqueeText1, marqueeText2, marqueeText3].filter(Boolean);
+  const marqueeAbove = marqueePosition === "above-nav";
+
+  const MarqueeBar = marqueeTexts.length > 0 ? (
+    <div className={`pm-marquee ${hlCls(["faixa"])}`} style={{ background: primaryColor, color: btnTextColor }}>
+      {active === "faixa" && <span className="pm-label">Faixa</span>}
+      <span>{marqueeTexts.join("  •  ")}</span>
+    </div>
+  ) : null;
+
+  const heroLines = (heroTitle || "Descubra os Melhores\nProdutos").split("\n");
+
+  const HeroSection = showHero ? (
+    <section className={`pm-hero pm-hero--${heroAlign} ${hlCls(["hero"])}`}>
+      {active === "hero" && <span className="pm-label">Hero</span>}
+      {heroTag && <span className="pm-hero-tag" style={{ background: `rgba(${primaryRgb},0.15)`, color: primaryColor }}>{heroTag}</span>}
+      <h1 className="pm-hero-title" style={{ color: titleColor }}>
+        {heroLines.map((ln, i) => <Fragment key={i}>{i > 0 && <br />}{ln}</Fragment>)}
+      </h1>
+      <p className="pm-hero-sub" style={{ color: textColor }}>{heroSubtitle || "Os melhores produtos."}</p>
+    </section>
+  ) : null;
+
+  return (
+    <div className={`pm-root ${active === "cores" ? "pm-hl-border" : ""}`} style={css}>
+      {active === "cores" && <span className="pm-label pm-label--global">Cores da Loja</span>}
+
+      {marqueeAbove && MarqueeBar}
+
+      {/* Navbar */}
+      <header className={`pm-header ${stickyHeader ? "pm-header--sticky" : ""} ${hlCls(["navbar","identidade"])}`}
+        style={{ background: headerColor }}>
+        {(active === "navbar" || active === "identidade") && (
+          <span className="pm-label">{active === "identidade" ? "Identidade" : "Navbar"}</span>
+        )}
+        <div className={`pm-header-inner pm-header-inner--${logoPosition}`}>
+          <div className="pm-logo">
+            {logoDisplay !== "text-only" && (
+              logoUrl
+                ? <img src={logoUrl} alt="logo" style={{ height: `${Math.max(14, logoSize * 0.28)}px`, maxWidth: 48, objectFit: "contain" }} />
+                : <span style={{ fontSize: `${Math.max(14, logoSize * 0.28)}px`, lineHeight: 1 }}>{logo || "🛍️"}</span>
+            )}
+            {logoDisplay !== "image-only" && (
+              <span className="pm-logo-text" style={{ color: titleColor }}>{storeName || "Minha Loja"}</span>
+            )}
+          </div>
+          <div className="pm-header-actions" style={{ color: titleColor }}>
+            <IconUser />
+            <span style={{ position: "relative", display: "inline-flex" }}>
+              <IconBag />
+              <span className="pm-badge" style={{ background: primaryColor, color: btnTextColor }}>2</span>
+            </span>
+          </div>
+        </div>
+      </header>
+
+      {!marqueeAbove && MarqueeBar}
+
+      {heroPosition === "before-banner" && HeroSection}
+
+      {/* Banner placeholder */}
+      <div className="pm-banner">
+        <span style={{ color: textColor, opacity: 0.4, fontSize: "0.65rem", fontWeight: 700 }}>Banner</span>
+      </div>
+
+      {heroPosition === "after-banner" && HeroSection}
+
+      {/* Products */}
+      <div className={`pm-products ${hlCls(["cards","tipografia"])}`}>
+        {(active === "cards" || active === "tipografia") && (
+          <span className="pm-label">{active === "cards" ? "Cards" : "Tipografia"}</span>
+        )}
+        <div className="pm-products-header">
+          <span className="pm-products-title" style={{ color: titleColor }}>Produtos</span>
+          <span style={{ color: textColor, fontSize: "0.62rem" }}>2 itens</span>
+        </div>
+        <div className={`pm-grid pm-cards-${cardStyle}`}>
+          {MOCK_PRODUCTS.map((p) => (
+            <div key={p.id} className="pm-card" style={{ background: bgCard, borderColor: borderCol, borderRadius: cardRadius }}>
+              <div className="pm-card-img-wrap">
+                {p.badge && <span className="pm-card-badge" style={{ background: `linear-gradient(135deg,${primaryColor},${secondaryColor})`, color: btnTextColor }}>{p.badge}</span>}
+                <div className="pm-card-img">🖼️</div>
+              </div>
+              <div className="pm-card-body" style={{ textAlign: productTitleAlign }}>
+                <span className="pm-card-cat" style={{ color: primaryColor }}>{p.cat}</span>
+                <div className="pm-card-name" style={{ color: titleColor }}>{p.name}</div>
+                <div className="pm-card-desc" style={{ color: textColor }}>{p.desc}</div>
+                <div className="pm-card-footer">
+                  <div>
+                    {p.oldPrice && <s className="pm-card-old" style={{ color: textColor }}>R$ {p.oldPrice.toFixed(2).replace(".",",")}</s>}
+                    <span className="pm-card-price" style={{ color: priceColor }}>R$ {p.price.toFixed(2).replace(".",",")}</span>
+                  </div>
+                  <button type="button" className="pm-card-btn" style={{ background: primaryColor, color: btnTextColor, borderRadius }}>Comprar</button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Footer */}
+      <footer className="pm-footer" style={{ borderColor: borderCol }}>
+        <div className="pm-footer-icons" style={{ color: textColor }}>
+          <span><IconTruck /> Frete</span>
+          <span><IconCard /> 12x</span>
+          <span><IconTag /> Pix</span>
+        </div>
+        <div className="pm-footer-name" style={{ color: titleColor }}>{storeName || "Minha Loja"}</div>
+        <div className="pm-footer-copy" style={{ color: textColor }}>© 2026. Todos os direitos reservados.</div>
+      </footer>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
 // SettingsGroup — card de seção com step indicator
 // ─────────────────────────────────────────────────────────────
 function SettingsGroup({
@@ -3697,257 +3958,40 @@ function SettingsSection({
   const fontParam = GOOGLE_FONT_MAP[fontFamily] ?? GOOGLE_FONT_MAP["Inter"];
   const googleFontsUrl = `https://fonts.googleapis.com/css2?family=${fontParam}&display=swap`;
 
-  // Componente de pré-visualização em tempo real da loja (mockup leve)
-  const StorePreview = () => {
-    const getRgbFromHex = (hexColor: string) => {
-      const cleanHex = hexColor.replace("#", "");
-      if (cleanHex.length === 6) {
-        const r = parseInt(cleanHex.substring(0, 2), 16);
-        const g = parseInt(cleanHex.substring(2, 4), 16);
-        const b = parseInt(cleanHex.substring(4, 6), 16);
-        return `${r}, ${g}, ${b}`;
-      }
-      return "139, 92, 246";
-    };
-
-    const primaryRgb = getRgbFromHex(primaryColor);
-
-    const previewStyles = {
-      fontFamily: `'${fontFamily}', -apple-system, sans-serif`,
-      fontWeight: fontWeight,
-      '--accent': primaryColor,
-      '--accent-rgb': primaryRgb,
-      '--accent-dim': `rgba(${primaryRgb}, 0.15)`,
-      '--accent-glow': `rgba(${primaryRgb}, 0.4)`,
-      '--accent-bright': primaryColor,
-      '--bg': tertiaryColor,
-      '--bg-card': `color-mix(in srgb, ${tertiaryColor} 95%, ${titleColor})`,
-      '--bg-elevated': `color-mix(in srgb, ${tertiaryColor} 90%, ${titleColor})`,
-      '--header-bg': headerColor,
-      '--text': titleColor,
-      '--text-muted': textColor,
-      '--price-color': priceColor,
-      '--btn-text': btnTextColor,
-      '--border': `color-mix(in srgb, ${titleColor} 12%, transparent)`,
-      '--border-hover': `rgba(${primaryRgb}, 0.5)`,
-      '--radius': borderRadius,
-      '--radius-lg': `calc(${borderRadius} * 1.5)`,
-      '--radius-xl': `calc(${borderRadius} * 2)`,
-      '--radius-sm': `calc(${borderRadius} * 0.6)`,
-      '--card-radius': cardRadius,
-      '--success': secondaryColor,
-      '--gradient': `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
-      '--product-title-align': productTitleAlign,
-    } as React.CSSProperties;
-
-    const marqueeTexts = [marqueeText1, marqueeText2, marqueeText3].filter(Boolean);
-    
-    const IconUser = () => (
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-        <circle cx="12" cy="7" r="4" />
-      </svg>
-    );
-
-    const IconBag = () => (
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-        <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-        <line x1="3" y1="6" x2="21" y2="6" />
-        <path d="M16 10a4 4 0 0 1-8 0" />
-      </svg>
-    );
-
-    const IconTruck = () => (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-        <rect x="1" y="3" width="15" height="13" rx="1" />
-        <path d="M16 8h4l3 5v4h-7V8z" />
-        <circle cx="5.5" cy="18.5" r="2.5" />
-        <circle cx="18.5" cy="18.5" r="2.5" />
-      </svg>
-    );
-
-    const IconCard = () => (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-        <rect x="1" y="4" width="22" height="16" rx="2" />
-        <line x1="1" y1="10" x2="23" y2="10" />
-      </svg>
-    );
-
-    const IconTag = () => (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
-        <circle cx="7" cy="7" r="1.5" fill="currentColor" stroke="none" />
-      </svg>
-    );
-
-    const IconPhone = () => (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.13 1 .37 1.97.72 2.91a2 2 0 0 1-.45 2.11L7.91 9a16 16 0 0 0 6.16 6.16l1.04-.96a2 2 0 0 1 2.11-.45c.94.35 1.91.59 2.91.72A2 2 0 0 1 22 16.92z" />
-      </svg>
-    );
-
-    const marqueeBar = marqueeTexts.length > 0 && (
-      <div className={`preview-element preview-marquee ${activeSectionKey === "faixa" ? "highlighted" : ""}`} style={{ background: "var(--accent)", color: "var(--btn-text)" }}>
-        {activeSectionKey === "faixa" && <span className="preview-element-label">Faixa de Destaque</span>}
-        <div className="preview-marquee-track">
-          <span>{marqueeTexts[0]}</span>
-          {marqueeTexts.length > 1 && <span className="preview-marquee-separator">•</span>}
-          {marqueeTexts.length > 1 && <span>{marqueeTexts[1]}</span>}
-          {marqueeTexts.length > 2 && <span className="preview-marquee-separator">•</span>}
-          {marqueeTexts.length > 2 && <span>{marqueeTexts[2]}</span>}
-        </div>
-      </div>
-    );
-
-    const marqueeAbove = marqueePosition === "above-nav";
-
-    const mockProducts = [
-      {
-        id: "mock-1",
-        name: "Smartwatch Ultra 9 Pro",
-        description: "Notificações, NFC, oxímetro de pulso e tela AMOLED brilhante.",
-        price: 299.90,
-        oldPrice: 399.90,
-        category: "Eletrônicos",
-        badge: "Oferta",
-      },
-      {
-        id: "mock-2",
-        name: "Tênis Speed Runner v2",
-        description: "Tecnologia de amortecimento inteligente para corridas leves.",
-        price: 189.90,
-        category: "Esportes",
-        badge: "Popular",
-      }
-    ];
-
-    const heroLines = (heroTitle || "Descubra os Melhores\nProdutos").split("\n");
-
-    const heroSection = showHero && (
-      <section className={`preview-element preview-hero preview-hero--align-${heroAlign} ${activeSectionKey === "hero" ? "highlighted" : ""}`}>
-        {activeSectionKey === "hero" && <span className="preview-element-label">Hero</span>}
-        <div className="preview-hero-content">
-          {heroTag && <span className="preview-hero-tag" style={{ background: "var(--accent-dim)", color: "var(--accent)" }}>{heroTag}</span>}
-          <h1 className="preview-hero-title">
-            {heroLines.map((line, i) => (
-              <Fragment key={i}>
-                {i > 0 && <br />}
-                {line}
-              </Fragment>
-            ))}
-          </h1>
-          <p className="preview-hero-subtitle">{heroSubtitle || "Os melhores produtos."}</p>
-        </div>
-      </section>
-    );
-
-    return (
-      <div className={`store-preview-container ${activeSectionKey === "cores" ? "highlighted-border" : ""}`} style={previewStyles}>
-        {activeSectionKey === "cores" && <span className="preview-element-label global-theme-label">Cores da Loja</span>}
-
-        {/* Marquee Banner (Above) */}
-        {marqueeAbove && marqueeBar}
-
-        {/* Header/Navbar */}
-        <header className={`preview-element preview-header ${stickyHeader ? "preview-header--sticky" : ""} ${activeSectionKey === "navbar" || activeSectionKey === "identidade" ? "highlighted" : ""}`}>
-          {(activeSectionKey === "navbar" || activeSectionKey === "identidade") && (
-            <span className="preview-element-label">{activeSectionKey === "identidade" ? "Identidade" : "Navbar"}</span>
-          )}
-          <div className={`preview-header-inner preview-header-inner--logo-${logoPosition}`}>
-            <div className="preview-header-logo">
-              {logoDisplay !== "text-only" && (logoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={logoUrl} alt="Logo" style={{ height: `${logoSize * 0.3}px`, maxWidth: "60px", objectFit: "contain" }} />
-              ) : (
-                <span style={{ fontSize: `${logoSize * 0.3}px`, lineHeight: 1 }}>{logo || "🛍️"}</span>
-              ))}
-              {logoDisplay !== "image-only" && (
-                <span className="preview-header-logo-text">{storeName || "Minha Loja"}</span>
-              )}
-            </div>
-
-            <div className="preview-header-actions">
-              <span className="preview-icon"><IconUser /></span>
-              <span className="preview-icon" style={{ position: "relative" }}>
-                <IconBag />
-                <span className="preview-cart-badge" style={{ background: "var(--accent)", color: "var(--btn-text)" }}>2</span>
-              </span>
-            </div>
-          </div>
-        </header>
-
-        {/* Marquee Banner (Below) */}
-        {!marqueeAbove && marqueeBar}
-
-        {/* Hero Section (Before Banner) */}
-        {heroPosition === "before-banner" && heroSection}
-
-        {/* Mock Top Banner */}
-        <div className="preview-banner-placeholder">
-          <div className="preview-banner-img">
-            <span>Banner de Destaque</span>
-          </div>
-        </div>
-
-        {/* Hero Section (After Banner) */}
-        {heroPosition === "after-banner" && heroSection}
-
-        {/* Product Catalog Mockup */}
-        <div className={`preview-element preview-products-section ${activeSectionKey === "cards" || activeSectionKey === "tipografia" ? "highlighted" : ""}`}>
-          {(activeSectionKey === "cards" || activeSectionKey === "tipografia") && (
-            <span className="preview-element-label">{activeSectionKey === "cards" ? "Estilo do Card" : "Tipografia"}</span>
-          )}
-          <div className="preview-section-header">
-            <h2 className="preview-section-title">Todos os Produtos</h2>
-            <span className="preview-product-count">2 produtos</span>
-          </div>
-
-          <div className={`preview-product-grid cards-${cardStyle}`}>
-            {mockProducts.map((p) => {
-              const hasDiscount = !!p.oldPrice;
-              
-              return (
-                <div key={p.id} className="preview-product-card" style={{ borderRadius: "var(--card-radius)" }}>
-                  <div className="preview-product-card-img-wrap">
-                    {p.badge && <span className="preview-product-badge" style={{ background: "var(--gradient)", color: "var(--btn-text)" }}>{p.badge}</span>}
-                    <div className="preview-product-card-img">
-                      <span>🖼️</span>
-                    </div>
-                  </div>
-                  <div className="preview-product-card-body" style={{ textAlign: productTitleAlign }}>
-                    <span className="preview-product-category">{p.category}</span>
-                    <h3 className="preview-product-name">{p.name}</h3>
-                    <p className="preview-product-desc">{p.description}</p>
-                    
-                    <div className="preview-product-footer">
-                      <div className="preview-product-price-block">
-                        {hasDiscount && <s className="preview-product-old-price">R$ {p.oldPrice?.toFixed(2).replace(".", ",")}</s>}
-                        <span className="preview-product-price" style={{ color: "var(--price-color)" }}>R$ {p.price.toFixed(2).replace(".", ",")}</span>
-                      </div>
-                      
-                      <button type="button" className="preview-buy-btn" style={{ background: "var(--accent)", color: "var(--btn-text)", borderRadius: "var(--radius)" }}>
-                        Comprar
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Footer */}
-        <footer className="preview-footer">
-          <div style={{ display: "flex", justifyContent: "space-around", gap: 4, opacity: 0.8, fontSize: "0.6rem", paddingBottom: 8, borderBottom: "1px solid var(--border)", marginBottom: 8 }}>
-            <span style={{ display: "flex", alignItems: "center", gap: 3 }}><IconTruck /> Frete</span>
-            <span style={{ display: "flex", alignItems: "center", gap: 3 }}><IconCard /> 12x</span>
-            <span style={{ display: "flex", alignItems: "center", gap: 3 }}><IconTag /> Pix</span>
-          </div>
-          <p className="preview-footer-logo" style={{ fontSize: "0.75rem" }}>{storeName || "Minha Loja"}</p>
-          <p className="preview-footer-copy">© 2026. Todos os direitos reservados.</p>
-        </footer>
-      </div>
-    );
+  // Delegate preview rendering to the stable top-level component
+  const previewProps: StorePreviewProps = {
+    activeSectionKey,
+    storeName,
+    logo,
+    logoUrl,
+    logoDisplay,
+    logoSize,
+    logoPosition,
+    stickyHeader,
+    marqueeText1,
+    marqueeText2,
+    marqueeText3,
+    marqueePosition,
+    showHero,
+    heroAlign,
+    heroTag,
+    heroTitle,
+    heroSubtitle,
+    heroPosition,
+    cardStyle,
+    productTitleAlign,
+    primaryColor,
+    secondaryColor,
+    tertiaryColor,
+    headerColor,
+    titleColor,
+    textColor,
+    priceColor,
+    btnTextColor,
+    borderRadius,
+    cardRadius,
+    fontFamily,
+    fontWeight,
   };
 
   return (
@@ -4372,7 +4416,7 @@ function SettingsSection({
               <div className="phone-device-frame">
                 <div className="phone-device-notch" />
                 <div className="phone-device-screen">
-                  <StorePreview />
+                  <StorePreviewMockup {...previewProps} />
                 </div>
               </div>
             ) : (
@@ -4388,7 +4432,7 @@ function SettingsSection({
                   </div>
                 </div>
                 <div className="browser-device-content">
-                  <StorePreview />
+                  <StorePreviewMockup {...previewProps} />
                 </div>
               </div>
             )}
