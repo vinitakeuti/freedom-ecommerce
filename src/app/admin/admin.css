@@ -2745,15 +2745,10 @@
   .admin-co-visual-layout {
     grid-template-columns: 1fr;
   }
-  .admin-co-preview-wrap {
-    position: static;
-  }
 }
 
 .admin-co-preview-wrap {
-  position: sticky;
-  top: calc(var(--adm-header-h) + 16px);
-  align-self: start;
+  position: relative;
 }
 
 .admin-co-preview-label {
