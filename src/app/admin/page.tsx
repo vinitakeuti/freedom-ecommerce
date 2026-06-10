@@ -3537,387 +3537,7 @@ function BannersSection({
 // Must be a top-level component so React maintains its identity
 // between renders and never remounts the DOM tree.
 // ─────────────────────────────────────────────────────────────
-type StorePreviewProps = {
-  activeSectionKey: "identidade" | "navbar" | "faixa" | "hero" | "cores" | "tipografia" | "cards" | null;
-  storeName: string;
-  logo: string;
-  logoUrl: string;
-  logoDisplay: "image-text" | "image-only" | "text-only";
-  logoSize: number;
-  logoPosition: "left" | "center" | "right";
-  stickyHeader: boolean;
-  marqueeText1: string;
-  marqueeText2: string;
-  marqueeText3: string;
-  marqueePosition: "above-nav" | "below-nav";
-  showHero: boolean;
-  heroAlign: "left" | "center";
-  heroTag: string;
-  heroTitle: string;
-  heroSubtitle: string;
-  heroPosition: "before-banner" | "after-banner";
-  cardStyle: "default" | "minimal" | "clean" | "bold" | "neon" | "cinematic";
-  productTitleAlign: "left" | "center";
-  primaryColor: string;
-  secondaryColor: string;
-  tertiaryColor: string;
-  headerColor: string;
-  titleColor: string;
-  textColor: string;
-  priceColor: string;
-  btnTextColor: string;
-  borderRadius: string;
-  cardRadius: string;
-  fontFamily: string;
-  fontWeight: number;
-};
-
-function hexToRgb(hex: string): string {
-  const clean = hex.replace("#", "");
-  if (clean.length === 6) {
-    const r = parseInt(clean.slice(0, 2), 16);
-    const g = parseInt(clean.slice(2, 4), 16);
-    const b = parseInt(clean.slice(4, 6), 16);
-    return `${r}, ${g}, ${b}`;
-  }
-  return "139, 92, 246";
-}
-
-// Blend two hex colours: mix = (1-t)*base + t*blend
-function blendHex(base: string, blend: string, t: number): string {
-  const br = parseInt(base.replace("#","").slice(0,2), 16);
-  const bg = parseInt(base.replace("#","").slice(2,4), 16);
-  const bb = parseInt(base.replace("#","").slice(4,6), 16);
-  const lr = parseInt(blend.replace("#","").slice(0,2), 16);
-  const lg = parseInt(blend.replace("#","").slice(2,4), 16);
-  const lb = parseInt(blend.replace("#","").slice(4,6), 16);
-  const r = Math.round(br + (lr - br) * t);
-  const g = Math.round(bg + (lg - bg) * t);
-  const b = Math.round(bb + (lb - bb) * t);
-  return `rgb(${r},${g},${b})`;
-}
-
-const MOCK_PRODUCTS = [
-  { id: "m1", name: "Smartwatch Ultra Pro", desc: "AMOLED · NFC · Oxímetro", price: 299.90, oldPrice: 399.90, cat: "Eletrônicos", badge: "Oferta" },
-  { id: "m2", name: "Tênis Speed Runner", desc: "Amortecimento inteligente", price: 189.90, cat: "Esportes", badge: "Popular" },
-];
-
-function IconUser() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-      <circle cx="12" cy="7" r="4" />
-    </svg>
-  );
-}
-function IconBag() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 0 1-8 0" />
-    </svg>
-  );
-}
-function IconTruck() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <rect x="1" y="3" width="15" height="13" rx="1" /><path d="M16 8h4l3 5v4h-7V8z" />
-      <circle cx="5.5" cy="18.5" r="2.5" /><circle cx="18.5" cy="18.5" r="2.5" />
-    </svg>
-  );
-}
-function IconCard() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <rect x="1" y="4" width="22" height="16" rx="2" /><line x1="1" y1="10" x2="23" y2="10" />
-    </svg>
-  );
-}
-function IconTag() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
-      <circle cx="7" cy="7" r="1.5" fill="currentColor" stroke="none" />
-    </svg>
-  );
-}
-
-function StorePreviewMockup({
-  activeSectionKey,
-  storeName, logo, logoUrl, logoDisplay, logoSize, logoPosition, stickyHeader,
-  marqueeText1, marqueeText2, marqueeText3, marqueePosition,
-  showHero, heroAlign, heroTag, heroTitle, heroSubtitle, heroPosition,
-  cardStyle, productTitleAlign,
-  primaryColor, secondaryColor, tertiaryColor, headerColor,
-  titleColor, textColor, priceColor, btnTextColor,
-  borderRadius, cardRadius, fontFamily, fontWeight,
-}: StorePreviewProps) {
-  const primaryRgb = hexToRgb(primaryColor);
-  const bgCard = blendHex(tertiaryColor, titleColor, 0.05);
-  const borderCol = `rgba(${hexToRgb(titleColor)}, 0.12)`;
-
-  const css = {
-    fontFamily: `'${fontFamily}', -apple-system, sans-serif`,
-    fontWeight,
-    "--accent":       primaryColor,
-    "--accent-rgb":   primaryRgb,
-    "--accent-dim":   `rgba(${primaryRgb}, 0.15)`,
-    "--accent-glow":  `rgba(${primaryRgb}, 0.4)`,
-    "--bg":           tertiaryColor,
-    "--bg-card":      bgCard,
-    "--header-bg":    headerColor,
-    "--text":         titleColor,
-    "--text-muted":   textColor,
-    "--price-color":  priceColor,
-    "--btn-text":     btnTextColor,
-    "--border":       borderCol,
-    "--border-hover": `rgba(${primaryRgb}, 0.5)`,
-    "--radius":       borderRadius,
-    "--card-radius":  cardRadius,
-    "--gradient":     `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
-  } as React.CSSProperties;
-
-  switch (activeSectionKey) {
-    case "identidade": {
-      return (
-        <div className="vgu-widget vgu-identidade" style={css}>
-          <div className="vgu-badge-section">Identidade Visual</div>
-          <div className="vgu-logo-demo" style={{ justifyContent: logoPosition === "left" ? "flex-start" : logoPosition === "center" ? "center" : "flex-end" }}>
-            {logoDisplay !== "text-only" && (
-              logoUrl
-                ? <img src={logoUrl} alt="logo" style={{ height: `${logoSize}px`, maxWidth: "100%", objectFit: "contain" }} />
-                : <span style={{ fontSize: `${logoSize}px`, lineHeight: 1 }}>{logo || "🛍️"}</span>
-            )}
-            {logoDisplay !== "image-only" && (
-              <span className="vgu-logo-text" style={{ color: titleColor }}>{storeName || "Minha Loja"}</span>
-            )}
-          </div>
-          <div className="vgu-meta-info">
-            <div><strong>Nome:</strong> {storeName || "Minha Loja"}</div>
-            <div><strong>Alinhamento:</strong> {logoPosition === "left" ? "Esquerda" : logoPosition === "center" ? "Centro" : "Direita"}</div>
-            <div><strong>Tamanho da Logo:</strong> {logoSize}px</div>
-          </div>
-        </div>
-      );
-    }
-    case "navbar": {
-      return (
-        <div className="vgu-widget vgu-navbar" style={css}>
-          <div className="vgu-badge-section">Navbar (Cabeçalho)</div>
-          <div className="vgu-nav-container" style={{ background: headerColor, border: `1px solid ${borderCol}` }}>
-            <div className="vgu-nav-inner" style={{ flexDirection: logoPosition === "right" ? "row-reverse" : "row" }}>
-              <div className="vgu-logo-demo-mini">
-                {logoDisplay !== "text-only" && (
-                  logoUrl
-                    ? <img src={logoUrl} alt="logo" style={{ height: `${Math.max(16, logoSize * 0.4)}px`, maxWidth: 64, objectFit: "contain" }} />
-                    : <span style={{ fontSize: `${Math.max(16, logoSize * 0.4)}px` }}>{logo || "🛍️"}</span>
-                )}
-                {logoDisplay !== "image-only" && (
-                  <span className="vgu-logo-text-mini" style={{ color: titleColor }}>{storeName || "Minha Loja"}</span>
-                )}
-              </div>
-              <div className="vgu-nav-actions" style={{ color: titleColor }}>
-                <IconUser />
-                <span className="vgu-cart-mini">
-                  <IconBag />
-                  <span className="vgu-badge-count" style={{ background: primaryColor, color: btnTextColor }}>3</span>
-                </span>
-              </div>
-            </div>
-          </div>
-          <div className="vgu-meta-info">
-            <div><strong>Fundo da Navbar:</strong> <span className="vgu-color-dot" style={{ background: headerColor }} /> {headerColor}</div>
-            <div><strong>Fixar no topo (Sticky):</strong> {stickyHeader ? "Sim (Ativo)" : "Não"}</div>
-          </div>
-        </div>
-      );
-    }
-    case "faixa": {
-      const marqueeTexts = [marqueeText1, marqueeText2, marqueeText3].filter(Boolean);
-      return (
-        <div className="vgu-widget vgu-faixa" style={css}>
-          <div className="vgu-badge-section">Faixa de Destaque</div>
-          {marqueeTexts.length > 0 ? (
-            <div className="vgu-marquee-preview" style={{ background: primaryColor, color: btnTextColor }}>
-              <div className="vgu-marquee-text-track">
-                <span>{marqueeTexts.join("  •  ")}</span>
-              </div>
-            </div>
-          ) : (
-            <div className="vgu-empty-state">Preencha ao menos o Texto 1 para ativar a faixa.</div>
-          )}
-          <div className="vgu-meta-info">
-            <div><strong>Posicionamento:</strong> {marqueePosition === "above-nav" ? "Acima da Navbar" : "Abaixo da Navbar"}</div>
-            <div><strong>Cor de Fundo:</strong> <span className="vgu-color-dot" style={{ background: primaryColor }} /> {primaryColor}</div>
-            <div><strong>Cor do Texto:</strong> <span className="vgu-color-dot" style={{ background: btnTextColor }} /> {btnTextColor}</div>
-          </div>
-        </div>
-      );
-    }
-    case "hero": {
-      const heroLines = (heroTitle || "Descubra os Melhores\nProdutos").split("\n");
-      return (
-        <div className="vgu-widget vgu-hero" style={css}>
-          <div className="vgu-badge-section">Seção Hero (Boas-Vindas)</div>
-          {showHero ? (
-            <div className="vgu-hero-demo" style={{ textAlign: heroAlign, alignItems: heroAlign === "center" ? "center" : "flex-start", background: `radial-gradient(circle at top right, rgba(${primaryRgb}, 0.08), transparent 70%)` }}>
-              {heroTag && <span className="vgu-hero-tag" style={{ background: `rgba(${primaryRgb},0.15)`, color: primaryColor }}>{heroTag}</span>}
-              <h2 className="vgu-hero-title" style={{ color: titleColor }}>
-                {heroLines.map((ln, i) => <Fragment key={i}>{i > 0 && <br />}{ln}</Fragment>)}
-              </h2>
-              <p className="vgu-hero-sub" style={{ color: textColor }}>{heroSubtitle || "Os melhores produtos com as melhores ofertas."}</p>
-            </div>
-          ) : (
-            <div className="vgu-empty-state">Seção Hero desativada nas configurações.</div>
-          )}
-          <div className="vgu-meta-info">
-            <div><strong>Exibição:</strong> {showHero ? "Ativa" : "Oculta"}</div>
-            <div><strong>Alinhamento:</strong> {heroAlign === "center" ? "Centralizado" : "À Esquerda"}</div>
-            <div><strong>Posição do Banner:</strong> {heroPosition === "before-banner" ? "Antes do Banner" : "Depois do Banner"}</div>
-          </div>
-        </div>
-      );
-    }
-    case "cores": {
-      return (
-        <div className="vgu-widget vgu-cores" style={css}>
-          <div className="vgu-badge-section">Paleta de Cores & Botões</div>
-          <div className="vgu-colors-grid">
-            <div className="vgu-color-card">
-              <span className="vgu-color-swatch" style={{ background: primaryColor }} />
-              <div className="vgu-color-card-info">
-                <span>Principal</span>
-                <strong>{primaryColor}</strong>
-              </div>
-            </div>
-            <div className="vgu-color-card">
-              <span className="vgu-color-swatch" style={{ background: secondaryColor }} />
-              <div className="vgu-color-card-info">
-                <span>Secundária</span>
-                <strong>{secondaryColor}</strong>
-              </div>
-            </div>
-            <div className="vgu-color-card">
-              <span className="vgu-color-swatch" style={{ background: tertiaryColor }} />
-              <div className="vgu-color-card-info">
-                <span>Fundo Geral</span>
-                <strong>{tertiaryColor}</strong>
-              </div>
-            </div>
-            <div className="vgu-color-card">
-              <span className="vgu-color-swatch" style={{ background: headerColor }} />
-              <div className="vgu-color-card-info">
-                <span>Navbar</span>
-                <strong>{headerColor}</strong>
-              </div>
-            </div>
-          </div>
-
-          <div className="vgu-buttons-demo" style={{ background: tertiaryColor, border: `1px solid ${borderCol}` }}>
-            <div style={{ fontSize: "0.75rem", color: textColor, marginBottom: 8, opacity: 0.7 }}>Demonstração de Botões & Arredondamento ({borderRadius})</div>
-            <div style={{ display: "flex", gap: 10 }}>
-              <button type="button" className="vgu-btn-test primary" style={{ background: primaryColor, color: btnTextColor, borderRadius }}>
-                Botão Principal
-              </button>
-              <button type="button" className="vgu-btn-test gradient" style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`, color: btnTextColor, borderRadius }}>
-                Botão Degradê
-              </button>
-            </div>
-          </div>
-        </div>
-      );
-    }
-    case "tipografia": {
-      return (
-        <div className="vgu-widget vgu-tipografia" style={css}>
-          <div className="vgu-badge-section">Tipografia & Textos</div>
-          <div className="vgu-typo-sheet">
-            <div className="vgu-typo-font-badge">
-              Fonte Selecionada: <strong>{fontFamily}</strong> (Peso: {fontWeight})
-            </div>
-            <h1 style={{ color: titleColor, fontWeight, fontSize: "1.4rem", margin: "0 0 6px" }}>
-              Título Principal
-            </h1>
-            <h3 style={{ color: titleColor, fontWeight: Math.max(300, fontWeight - 100), fontSize: "1rem", margin: "0 0 10px" }}>
-              Subtítulo ou Categoria
-            </h3>
-            <p style={{ color: textColor, fontSize: "0.8rem", margin: "0 0 14px", lineHeight: 1.4 }}>
-              Este é um exemplo de texto corrido. As descrições curtas dos produtos e os detalhes de texto na loja utilizarão essa cor e peso de fonte.
-            </p>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 10, borderTop: `1px dashed ${borderCol}` }}>
-              <div>
-                <span style={{ display: "block", fontSize: "0.65rem", color: textColor }}>Preço do Produto</span>
-                <span style={{ fontSize: "1.1rem", fontWeight: 800, color: priceColor }}>R$ 199,90</span>
-              </div>
-              <button type="button" style={{ background: primaryColor, color: btnTextColor, borderRadius, border: "none", padding: "6px 12px", fontSize: "0.75rem", fontWeight: 650 }}>
-                Comprar
-              </button>
-            </div>
-          </div>
-          <div className="vgu-meta-info">
-            <div><strong>Alinhamento dos Títulos:</strong> {productTitleAlign === "left" ? "Alinhado à esquerda" : "Centralizado"}</div>
-          </div>
-        </div>
-      );
-    }
-    case "cards": {
-      const mockP = {
-        name: "Smartwatch Ultra Pro",
-        desc: "AMOLED · NFC · Oxímetro de Pulso Integrado",
-        price: 299.90,
-        oldPrice: 399.90,
-        cat: "Eletrônicos",
-        badge: "Oferta"
-      };
-      return (
-        <div className="vgu-widget vgu-cards" style={css}>
-          <div className="vgu-badge-section">Estilo dos Cards de Produto</div>
-          <div className="vgu-card-container">
-            <div className={`vgu-product-card vgu-card-style-${cardStyle}`} style={{ background: bgCard, borderColor: borderCol, borderRadius: cardRadius }}>
-              <div className="vgu-card-img-wrap">
-                {mockP.badge && (
-                  <span className="vgu-card-badge" style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`, color: btnTextColor }}>
-                    {mockP.badge}
-                  </span>
-                )}
-                <div className="vgu-card-img-placeholder">🖼️</div>
-              </div>
-              <div className="vgu-card-body" style={{ textAlign: productTitleAlign }}>
-                <span className="vgu-card-cat" style={{ color: primaryColor }}>{mockP.cat}</span>
-                <div className="vgu-card-name" style={{ color: titleColor }}>{mockP.name}</div>
-                <div className="vgu-card-desc" style={{ color: textColor }}>{mockP.desc}</div>
-                <div className="vgu-card-footer">
-                  <div>
-                    {mockP.oldPrice && <s className="vgu-card-old" style={{ color: textColor }}>R$ {mockP.oldPrice.toFixed(2).replace(".", ",")}</s>}
-                    <span className="vgu-card-price" style={{ color: priceColor }}>R$ {mockP.price.toFixed(2).replace(".", ",")}</span>
-                  </div>
-                  <button type="button" className="vgu-card-btn" style={{ background: primaryColor, color: btnTextColor, borderRadius }}>
-                    Comprar
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="vgu-meta-info">
-            <div><strong>Estilo:</strong> {cardStyle.toUpperCase()}</div>
-            <div><strong>Arredondamento do Card:</strong> {cardRadius}</div>
-          </div>
-        </div>
-      );
-    }
-    default: {
-      return (
-        <div className="vgu-widget vgu-intro" style={css}>
-          <div className="vgu-badge-section">Aparência da Loja</div>
-          <div className="vgu-intro-content">
-            <div className="vgu-intro-icon">🎨</div>
-            <h3>Seletor de Guia Visual</h3>
-            <p>Posicione o cursor do mouse sobre qualquer uma das seções de edição ao lado para carregar a pré-visualização isolada do componente correspondente.</p>
-          </div>
-        </div>
-      );
-    }
-  }
-}
+// Preview removed.
 
 // ─────────────────────────────────────────────────────────────
 // SettingsGroup — card de seção com step indicator
@@ -3927,7 +3547,6 @@ function SettingsGroup({
   title,
   children,
   id,
-  onActive,
 }: {
   step: number;
   title: string;
@@ -3936,12 +3555,7 @@ function SettingsGroup({
   onActive?: () => void;
 }) {
   return (
-    <div
-      className="settings-group"
-      id={id}
-      onMouseEnter={onActive}
-      onFocusCapture={onActive}
-    >
+    <div className="settings-group" id={id}>
       <div className="settings-group-header">
         <span className="settings-group-step">{step}</span>
         <span className="settings-group-title">{title}</span>
@@ -4064,91 +3678,17 @@ function SettingsSection({
   const [cardRadius,   setCardRadius]   = useState(data.cardRadius   || data.borderRadius || "14px");
 
   // Estados locais para controlar a pré-visualização lateral e destaque ativo
-  const [activeSectionKey, setActiveSectionKey] = useState<"identidade" | "navbar" | "faixa" | "hero" | "cores" | "tipografia" | "cards" | null>("identidade");
-  const [mobileTab, setMobileTab] = useState<"edit" | "preview">("edit");
-
-  // Map font family
-  const GOOGLE_FONT_MAP: Record<string, string> = {
-    "Inter":            "Inter:wght@300;400;500;600;700;800",
-    "Roboto":           "Roboto:wght@300;400;500;600;700;800",
-    "Poppins":          "Poppins:wght@300;400;500;600;700;800",
-    "Montserrat":       "Montserrat:wght@300;400;500;600;700;800",
-    "Raleway":          "Raleway:wght@300;400;500;600;700;800",
-    "Nunito":           "Nunito:wght@300;400;500;600;700;800",
-    "Lato":             "Lato:wght@300;400;700",
-    "Oswald":           "Oswald:wght@300;400;500;600;700",
-    "Playfair Display": "Playfair+Display:wght@400;500;600;700;800",
-    "DM Sans":          "DM+Sans:wght@300;400;500;600;700",
-  };
-  const fontParam = GOOGLE_FONT_MAP[fontFamily] ?? GOOGLE_FONT_MAP["Inter"];
-  const googleFontsUrl = `https://fonts.googleapis.com/css2?family=${fontParam}&display=swap`;
-
-  // Delegate preview rendering to the stable top-level component
-  const previewProps: StorePreviewProps = {
-    activeSectionKey,
-    storeName,
-    logo,
-    logoUrl,
-    logoDisplay,
-    logoSize,
-    logoPosition,
-    stickyHeader,
-    marqueeText1,
-    marqueeText2,
-    marqueeText3,
-    marqueePosition,
-    showHero,
-    heroAlign,
-    heroTag,
-    heroTitle,
-    heroSubtitle,
-    heroPosition,
-    cardStyle,
-    productTitleAlign,
-    primaryColor,
-    secondaryColor,
-    tertiaryColor,
-    headerColor,
-    titleColor,
-    textColor,
-    priceColor,
-    btnTextColor,
-    borderRadius,
-    cardRadius,
-    fontFamily,
-    fontWeight,
-  };
+  // No states or previewProps.
 
   return (
     <div className="admin-settings-container">
-      <link rel="stylesheet" href={googleFontsUrl} />
-      {/* Mobile tabs switches */}
-      <div className="admin-settings-mobile-tabs">
-        <button
-          type="button"
-          className={`admin-settings-tab-btn ${mobileTab === "edit" ? "active" : ""}`}
-          onClick={() => setMobileTab("edit")}
-        >
-          Editar Aparência
-        </button>
-        <button
-          type="button"
-          className={`admin-settings-tab-btn ${mobileTab === "preview" ? "active" : ""}`}
-          onClick={() => setMobileTab("preview")}
-        >
-          Ver Prévia
-        </button>
-      </div>
-
-      <div className={`admin-settings-layout ${mobileTab === "preview" ? "show-preview-only" : "show-edit-only"}`}>
-        {/* Editor Settings Column (Left) */}
+      <div className="admin-settings-layout">
         <div className="admin-settings-editor">
           {/* ── 1. Identidade ── */}
           <SettingsGroup
             step={1}
             title="Identidade da Loja"
             id="admin-section-settings-identidade"
-            onActive={() => setActiveSectionKey("identidade")}
           >
             <div className="admin-form-grid">
               <div className="admin-form-field span-2">
@@ -4192,7 +3732,6 @@ function SettingsSection({
             step={2}
             title="Navbar"
             id="admin-section-settings-navbar"
-            onActive={() => setActiveSectionKey("navbar")}
           >
             <div className="admin-form-grid">
               <div className="admin-form-field span-2">
@@ -4240,7 +3779,6 @@ function SettingsSection({
             step={3}
             title="Faixa de Destaque"
             id="admin-section-settings-faixa"
-            onActive={() => setActiveSectionKey("faixa")}
           >
             <div className="admin-form-grid">
               <div className="admin-form-field">
@@ -4276,7 +3814,6 @@ function SettingsSection({
             step={4}
             title="Seção de Boas-vindas (Hero)"
             id="admin-section-settings-hero"
-            onActive={() => setActiveSectionKey("hero")}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
               <label className="admin-toggle">
@@ -4365,7 +3902,6 @@ function SettingsSection({
             step={5}
             title="Cores e Aparência"
             id="admin-section-settings-cores"
-            onActive={() => setActiveSectionKey("cores")}
           >
             <div className="admin-form-grid">
               <ColorField label="Cor Principal (Botões e Hover)" value={primaryColor}   onChange={setPrimaryColor} />
@@ -4389,7 +3925,6 @@ function SettingsSection({
             step={6}
             title="Tipografia"
             id="admin-section-settings-tipografia"
-            onActive={() => setActiveSectionKey("tipografia")}
           >
             <div className="admin-form-grid">
               <div className="admin-form-field span-2">
@@ -4442,7 +3977,6 @@ function SettingsSection({
             step={7}
             title="Design dos Cards de Produto"
             id="admin-section-settings-cards"
-            onActive={() => setActiveSectionKey("cards")}
           >
             {/* Card style */}
             <div style={{ marginBottom: 20 }}>
@@ -4511,21 +4045,6 @@ function SettingsSection({
             >
               {saving ? "Salvando…" : "Salvar todas as configurações"}
             </button>
-          </div>
-        </div>
-
-        {/* Live Preview Pane (Right) - Simplified Visual Guide */}
-        <div className="admin-settings-preview-pane">
-          <div className="admin-preview-controls">
-            <span className="admin-preview-title">Guia Visual de Edição</span>
-            <span style={{ fontSize: "0.72rem", color: "var(--adm-text-muted)", display: "flex", alignItems: "center", gap: "6px" }}>
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#10b981" }} />
-              Destaque Ativo
-            </span>
-          </div>
-
-          <div className="admin-preview-viewport-wrapper">
-            <StorePreviewMockup {...previewProps} />
           </div>
         </div>
       </div>
