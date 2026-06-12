@@ -9,7 +9,6 @@ export default async function PoliticaDePrivacidadePage() {
 
   const storeName = store.storeName;
   const email = `contato@${tenant === "localhost" ? storeName.toLowerCase().replace(/\s+/g, "") + ".com" : tenant}`;
-  const siteUrl = tenant === "localhost" ? "http://localhost:3000" : `https://${tenant}`;
   const effectiveDate = store.legalEffectiveDate || "03 de maio de 2023";
 
   return (
