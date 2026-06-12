@@ -3534,3 +3534,125 @@ a.co2-back-cart--modal {
   object-fit: cover;
 }
 
+/* ─── Legal & Policy Pages ───────────────────────────────── */
+.legal-container {
+  max-width: 840px;
+  margin: 0 auto;
+  padding: 60px 24px;
+}
+
+.legal-header {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 24px;
+  margin-bottom: 40px;
+}
+
+.legal-title {
+  font-size: clamp(2rem, 5vw, 2.75rem);
+  font-weight: 800;
+  letter-spacing: -1px;
+  line-height: 1.15;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+
+.legal-meta {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.legal-meta::before {
+  content: "📅";
+}
+
+.legal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.legal-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.legal-section:hover {
+  border-color: var(--border-hover);
+  box-shadow: var(--shadow-accent);
+}
+
+.legal-section h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--accent-bright);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.legal-section p, 
+.legal-section ul {
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: var(--text-muted);
+}
+
+.legal-section ul {
+  padding-left: 20px;
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.legal-contact-card {
+  background: linear-gradient(135deg, var(--accent-dim), transparent);
+  border: 1px solid var(--border-hover);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  margin-top: 20px;
+  text-align: center;
+}
+
+.legal-contact-card h2 {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 16px;
+}
+
+.legal-contact-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.legal-contact-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  padding: 12px 24px;
+  border-radius: var(--radius);
+  font-weight: 600;
+  color: var(--text);
+  transition: all var(--transition);
+}
+
+.legal-contact-item:hover {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+  transform: translateY(-2px);
+}
+
+

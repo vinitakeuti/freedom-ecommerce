@@ -1,4 +1,5 @@
 import type { StoreData } from "@/lib/admin-types";
+import Link from "next/link";
 
 function IconTruck() {
   return (
@@ -73,18 +74,18 @@ export default function Footer({ store }: { store: StoreData }) {
             <div className="footer-col">
               <h4 className="footer-col-title">Institucional</h4>
               <ul className="footer-links">
-                <li><a href="#">Aviso Legal</a></li>
-                <li><a href="#">Termos e Serviços</a></li>
-                <li><a href="#">Informações de contato</a></li>
+                <li><Link href="/aviso-legal">Aviso Legal</Link></li>
+                <li><Link href="/termos-de-servico">Termos e Serviços</Link></li>
+                <li><Link href="/informacoes-de-contato">Informações de contato</Link></li>
               </ul>
             </div>
 
             <div className="footer-col">
               <h4 className="footer-col-title">Ajuda</h4>
               <ul className="footer-links">
-                <li><a href="#">Políticas de Envio</a></li>
-                <li><a href="#">Política de Privacidade</a></li>
-                <li><a href="#">Políticas de Reembolso</a></li>
+                <li><Link href="/politicas-de-envio">Políticas de Envio</Link></li>
+                <li><Link href="/politica-de-privacidade">Política de Privacidade</Link></li>
+                <li><Link href="/politicas-de-reembolso">Políticas de Reembolso</Link></li>
               </ul>
             </div>
 

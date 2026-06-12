@@ -178,4 +178,5 @@ export interface StoreData {
   banners: Banner[];
   products: AdminProduct[];
   pixels?: StorePixel[];
+  legalEffectiveDate?: string;
 }
